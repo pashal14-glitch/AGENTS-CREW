@@ -1,0 +1,2636 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הסבר בקליק</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+
+        .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.main-layout {
+    display: flex;
+    flex-direction: row;
+    min-height: 85vh;
+}
+.main-content {
+    flex: 1;
+    min-width: 0;
+    border-left: 2px solid #e9ecef;
+}
+
+        .header {
+            background: linear-gradient(45deg, #2c3e50, #3498db);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 { font-size: 1.8em; margin-bottom: 5px; }
+        .header p { opacity: 0.85; font-size: 0.95em; }
+
+        .content { padding: 30px; }
+
+        .upload-area {
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 25px;
+        }
+        .upload-area:hover { border-color: #3498db; background: #e3f2fd; }
+        .upload-area.loaded { border-color: #27ae60; background: #d5f4e6; }
+        .upload-icon { font-size: 3em; margin-bottom: 10px; }
+        .upload-area p { color: #666; font-size: 1.1em; }
+        #fileInput { display: none; }
+        .file-name { margin-top: 10px; font-weight: bold; color: #27ae60; }
+
+        .check-selection { margin-bottom: 25px; }
+        .check-selection label { display: block; font-weight: bold; color: #2c3e50; margin-bottom: 10px; font-size: 1.1em; }
+        .check-selection select {
+            width: 100%; padding: 12px 15px; border: 2px solid #ddd; border-radius: 10px;
+            font-size: 1em; font-family: inherit; background: white; cursor: pointer;
+        }
+        .check-selection select:focus { outline: none; border-color: #3498db; }
+
+        .btn-run {
+            display: block; width: 100%; padding: 14px;
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+            color: white; border: none; border-radius: 10px;
+            font-size: 1.15em; font-weight: bold; cursor: pointer;
+            transition: all 0.3s; margin-bottom: 25px;
+        }
+        .btn-run:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(39,174,96,0.4); }
+        .btn-run:disabled { background: #bdc3c7; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .results-area { display: none; }
+
+        .result-card {
+            background: #f8f9fa; border-radius: 12px; border: 2px solid #e9ecef;
+            padding: 25px; margin-bottom: 20px;
+        }
+        .result-card h3 {
+            color: #2c3e50; font-size: 1.3em; margin-bottom: 15px;
+            padding-bottom: 10px; border-bottom: 2px solid #3498db;
+        }
+
+        .explanation-text { line-height: 1.9; color: #333; font-size: 1.05em; white-space: pre-wrap; }
+        .explanation-text .highlight { background: #fff3cd; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .explanation-text .total { background: #d4edda; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .explanation-text .note { color: #856404; font-style: italic; }
+
+        .employee-info {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; padding: 15px 20px; border-radius: 10px;
+            margin-bottom: 20px; font-size: 1.05em;
+        }
+        .employee-info span { margin-left: 25px; }
+
+        .message { padding: 12px 18px; border-radius: 8px; margin-bottom: 15px; display: none; }
+        .message.error { background: #fadbd8; color: #c0392b; border: 1px solid #e74c3c; display: block; }
+        .message.warning { background: #fff3cd; color: #856404; border: 1px solid #ffc107; display: block; }
+        .message.info { background: #d1ecf1; color: #0c5460; border: 1px solid #17a2b8; display: block; }
+        .tlush-category {
+    margin-bottom: 20px;
+}
+.tlush-category-title {
+    background: linear-gradient(45deg, #2c3e50, #3498db);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 8px 8px 0 0;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+.tlush-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 5px;
+}
+.tlush-table th {
+    background: #f0f0f0;
+    padding: 8px;
+    border: 1px solid #ddd;
+    font-size: 0.85em;
+    color: #555;
+}
+.tlush-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    font-size: 0.9em;
+}
+.tlush-table tr:hover {
+    background: #e3f2fd;
+    cursor: pointer;
+}
+.tlush-table tr.has-explanation {
+    background: #fffde7;
+}
+.tlush-table tr.has-explanation:hover {
+    background: #fff9c4;
+}
+.tlush-explain-icon {
+    cursor: pointer;
+    font-size: 1.2em;
+}
+.tlush-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+.tlush-row .tlush-category {
+    flex: 1;
+}
+.expand-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.expand-btn:hover {
+    background: #2980b9;
+}
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📋 הסבר בקליק</h1>
+        <p>העלו קובץ נתוני שכר ובחרו סוג בדיקה לקבלת הסבר מפורט</p>
+    </div>
+
+    <div class="main-layout">
+<div class="main-content">
+    <div class="content">
+        <!-- העלאת קובץ - תמיד מוצג -->
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon">📁</div>
+            <p>לחצו כאן להעלאת קובץ אקסל של עובד</p>
+            <div class="file-name" id="fileName"></div>
+        </div>
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+
+        <!-- טאבים - מוצגים אחרי טעינת קובץ -->
+        <div class="tabs" id="tabsArea" style="display:none; flex-direction:row; margin-bottom:20px; border-bottom:3px solid #3498db;">
+            <button class="tab-btn active" id="tabTlush" onclick="switchTab('tlush')" style="flex:1; padding:12px; border:none; background:#3498db; color:white; font-size:1.1em; font-weight:bold; cursor:pointer; border-radius:8px 8px 0 0;">תצוגת תלוש</button>
+            <button class="tab-btn" id="tabChecks" onclick="switchTab('checks')" style="flex:1; padding:12px; border:none; background:#e9ecef; color:#333; font-size:1.1em; font-weight:bold; cursor:pointer; border-radius:8px 8px 0 0;">בדיקות מורכבות</button>
+        </div>
+
+        <!-- פאנל תלוש -->
+        <div id="tlushPanel" style="display:none;">
+            <div class="employee-info" id="tlushEmployeeInfo"></div>
+            <div id="tlushCategories"></div>
+        </div>
+
+        <!-- פאנל הסבר לתלוש -->
+        <div id="tlushExplanation" style="display:none; position:fixed; top:0; left:0; width:400px; height:100vh; background:white; box-shadow:5px 0 20px rgba(0,0,0,0.3); z-index:200; overflow-y:auto; padding:20px;">
+            <button onclick="closeTlushExplanation()" style="background:#e74c3c; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; margin-bottom:15px;">✕ סגור</button>
+            <h3 id="tlushExpTitle" style="color:#2c3e50; margin-bottom:15px;"></h3>
+            <div id="tlushExpContent" class="explanation-text"></div>
+        </div>
+
+        <!-- פאנל בדיקות מורכבות -->
+        <div id="checksPanel" style="display:none;">
+            <div class="check-selection">
+                <label>בחרו סוג בדיקה:</label>
+                <select id="checkType">
+                    <option value="">-- בחרו בדיקה --</option>
+                    <option value="vatik">תוספת ותק</option>
+                    <option value="nihul4517">מענק תוספת ניהול (4517)</option>
+                    <option value="check161">בדיקת סכומים בטופס 161</option>
+                  <option value="bruto91025">הרכבת ברוטו פנסיה (91025)</option>
+                  <option value="checkTax">בדיקת מס הכנסה</option>
+                  <option value="checkBituachLeumi">בדיקת ביטוח לאומי ומס בריאות</option>
+                  <option value="checkGilum">בדיקת גילומים</option>
+                </select>
+            </div>
+
+            <div class="message info" id="instructionsArea" style="display:none;"></div>
+
+            <button class="btn-run" id="btnRun" disabled onclick="runCheck()">▶ הצג הסבר</button>
+
+            <div class="message" id="messageArea"></div>
+
+            <div class="results-area" id="resultsArea">
+                <div class="employee-info" id="employeeInfo"></div>
+                <div class="result-card">
+                    <h3 id="resultTitle"></h3>
+                    <div class="explanation-text" id="explanationText"></div>
+                </div>
+            </div>
+        </div>
+ </div><!-- /content -->
+    </div><!-- /main-content -->
+<div style="width:340px; flex-shrink:0; display:flex; flex-direction:column; background:#f8f9fa; height:100vh; position:sticky; top:0; align-self:flex-start;">
+            <div style="background:linear-gradient(45deg,#1976D2,#42a5f5); color:white; padding:14px 16px; font-weight:bold; font-size:1em; text-align:center;">
+                💬 שאל את חשב השכר
+                <span id="chatContextLabel" style="font-size:0.8em; opacity:0.85; display:block; margin-top:3px;">טען קובץ לשאלות על עובד ספציפי</span>
+            </div>
+          <div id="chatMessages" style="height:200px; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px;">
+                <div style="background:#fff; border:1px solid #e0e0e0; border-radius:12px; padding:10px 13px; font-size:0.9em; align-self:flex-start;">שלום! אני עוזר השכר. אפשר לשאול שאלות על תקשי"ר, תכ"ם ורכיבי שכר.</div>
+            </div>
+            <div style="padding:10px; background:#fff; border-top:1px solid #ddd; display:flex; gap:8px;">
+                <input type="text" id="chatInput" placeholder="הקלד שאלה..." onkeypress="if(event.key==='Enter')chatSend()" style="flex:1; padding:9px 12px; border:1px solid #ccc; border-radius:20px; font-size:0.9em; font-family:inherit; outline:none;">
+                <button onclick="chatSend()" style="background:#1976D2; color:white; border:none; padding:9px 16px; border-radius:20px; cursor:pointer; font-size:0.9em; font-weight:bold;">שלח</button>
+            </div>
+        </div>
+
+    </div><!-- /main-layout -->
+</div><!-- /container -->
+<script>
+// ============================================
+// מיפוי עמודות קבוע (עברית)
+// ============================================
+const COL = {
+    MISRAD:        'משרד',
+    ZEHUT:         'זהות',
+    MN:            'מ.נ',
+    MISPAR_OVED:   'מספק עובד',
+    SEMEL:         'סמל',
+    SHEM_SEMEL:    'שם סמל',
+    TAARICH_SACHAR:'תאריך שכר',
+    TAARICH_ERECH: 'תאריך ערך',
+    SCHUM:         'סכום',           // שדה 1
+    KAMUT:         'כמות',           // שדה 2
+    ACHUZ:         'אחוז',           // שדה 3
+    TAARIF:        'תעריף',          // שדה 4
+    PRATIM:        'פרטים',          // שדה 5
+    SEIF_TAKTZIV:  'סעיף תקציבי',    // שדה 6
+    TAARICH_M:     'תאריך מ',        // שדה 7
+    TAARICH_AD:    'תאריך עד',       // שדה 8
+    VALUE_5:       'value_5',        // שדה 9
+    VALUE_6:       'value_6',        // שדה 10
+    VALUE_7:       'value_7',        // שדה 11
+    VALUE_8:       'value_8',        // שדה 12
+    VALUE_9:       'value_9',        // שדה 13
+    VALUE_10:      'value_10',       // שדה 14
+    VALUE_11:      'value_11',       // שדה 15
+    VALUE_12:      'value_12',       // שדה 16
+    VALUE_13:      'value_13',       // שדה 17
+    VALUE_14:      'value_14',       // שדה 18
+    VALUE_15:      'value_15',       // שדה 19
+    VALUE_16:      'value_16',       // שדה 20
+    VALUE_17:      'value_17',       // שדה 21
+    VALUE_18:      'value_18',       // שדה 22
+    VALUE_19:      'value_19',       // שדה 23
+    VALUE_20:      'value_20',       // שדה 24
+    VALUE_21:      'value_21',       // שדה 25
+    VALUE_22:      'value_22',       // שדה 26
+    VALUE_23:      'value_23',       // שדה 27
+    VALUE_24:      'value_24',       // שדה 28
+    SCHUM_SHIKLI:  'סכום שקלי',      // שדה 29
+};
+
+let rawData = [];
+let employeeData = {};
+let lastFileData = null;
+let ECOLOGY = null;
+const checkInstructions = {
+    vatik: {
+        title: 'תוספת ותק',
+        instructions: 'יש להכין קובץ נתונים כספיים לעובד עבור <strong>חודש אחד</strong>.'
+    },
+    // דוגמה לבדיקה עתידית שצריכה 3 חודשים
+    // example: {
+    //     title: 'בדיקה לדוגמה',
+    //     instructions: 'יש להכין קובץ נתונים כספיים לעובד עבור <strong>3 חודשים אחרונים</strong>.'
+    // },
+  nihul4517: {
+    title: 'מענק תוספת ניהול (4517)',
+    instructions: 'מדובר בתוספת רבעונית. יש לשלוף נתונים כספיים בגין <strong>3 חודשי ערך</strong> שקדמו לתשלום הנבדק.<br>לדוגמה: אם בודקים 01.01.2026, יש להוציא נתונים מ-01.10.2025 עד 31.12.2025.'
+},
+check161: {
+    title: 'בדיקת סכומים בטופס 161',
+    instructions: 'יש להוציא נתונים כספיים של <strong>חודש עבודה אחרון</strong>. המערכת תבדוק שלושה סכומים: משכורת מבוטחת, משכורת לפיצויים ומשכורת לפטור.'
+},
+};
+// ============================================
+// לוח ניכויים 2026 - רשות המסים
+// ============================================
+const TAX_TABLES = {
+    meta: { year: 2026 },
+    
+    incomeTax: {
+        monthly: [
+            { from: 0, to: 7010, rate: 0.10 },
+            { from: 7011, to: 10060, rate: 0.14 },
+            { from: 10061, to: 16150, rate: 0.20 },
+            { from: 16151, to: 22440, rate: 0.31 },
+            { from: 22441, to: 46690, rate: 0.35 },
+            { from: 46691, to: null, rate: 0.47 }
+        ]
+    },
+    
+    creditPoint: { monthly: 242 },
+    
+    additionalTax: {
+        threshold: 60130,
+        rate: 0.03
+    }
+};
+const SIMPLE_RULES = {
+    'הבראה': {
+        name: ' הבראה',
+        explanation: 'תשלום שנתי עבור דמי הבראה. מחושב לפי מספר ימי הזכאות כפול תעריף יום הבראה.',
+        fields: {
+            kamut: 'מספר ימי זכאות',
+            taarif: 'תעריף ליום',
+            schum: 'סה"כ תשלום'
+        }
+    },
+    'ביגוד': {
+        name: 'ביגוד',
+        explanation: 'תשלום שנתי לרכישת ביגוד.',
+        fields: {
+            schum: 'סה"כ תשלום'
+        }
+    },
+   'מענק יובל': {
+    name: 'מענק יובל',
+    explanation: 'מענק שנתי לבעלי ותק של 25 שנה ומעלה. משולם בשיעור 60% מהשכר הקובע (סמל 91025).',
+    relatedSemel: 91025,
+    checkPercent: 0.60,
+    fields: {
+        schum: 'סה"כ תשלום'
+    }
+},
+ 'שכר יסוד': {
+        name: 'שכר יסוד',
+        explanation: 'תוספת משולמת על פי דירוג ודרגה',
+        fields: {
+            schum: 'סה"כ תשלום'
+        }
+    },
+};
+const COMPLEX_RULES_MAP = {
+    90146: 'vatik',
+    4517: 'nihul4517',
+    9517: 'nihul4517',
+    91025: 'bruto91025',
+    91003: 'checkTax',
+    91001: 'checkBituachLeumi',
+    92041: 'checkBituachLeumi'
+};
+const COMPLEX_RULES_RANGES = [
+    { from: 8000, to: 8199, check: 'checkGilum' }
+];
+const NON_PENSION_KEYWORDS = [
+    'החזר', 'ש"נ', 'שעות נוספות', 'ש.נ', 'שנ', 'ש״נ',
+    'טלפון', 'כלכלה', 'נסיעות', 'אש"ל', 'אשל', 'אש״ל',
+    'הוצאות', 'נסיעה', 'רכב', 'דלק', 'חניה'
+];
+// ============================================
+// טעינת קובץ
+// ============================================
+document.getElementById('fileInput').addEventListener('change', async function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    document.getElementById('fileName').textContent = '✅ ' + file.name;
+    document.getElementById('uploadArea').classList.add('loaded');
+
+    try {
+        const data = await file.arrayBuffer();
+        lastFileData = data;
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        
+        // קריאה כמערך שורות
+        const allRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+        
+        // מציאת שורת הכותרות - מחפשים את השורה שמכילה "סמל"
+        let headerRowIndex = -1;
+        for (let i = 0; i < Math.min(allRows.length, 5); i++) {
+            const row = allRows[i];
+            if (row && row.some(cell => String(cell || '').trim() === 'סמל')) {
+                headerRowIndex = i;
+                break;
+            }
+        }
+
+        if (headerRowIndex === -1) {
+            showMessage('❌ לא נמצאה שורת כותרות עם השדה "סמל"', 'error');
+            return;
+        }
+
+        const headers = allRows[headerRowIndex].map(h => String(h || '').trim());
+        console.log('כותרות:', headers);
+
+        // המרה לאובייקטים
+        const dataRows = [];
+        for (let i = headerRowIndex + 1; i < allRows.length; i++) {
+            const row = allRows[i];
+            if (!row || row.length === 0) continue;
+            
+            const obj = {};
+            headers.forEach((header, idx) => {
+                if (header) obj[header] = row[idx];
+            });
+            
+            if (obj[COL.SEMEL]) {
+                dataRows.push(obj);
+            }
+        }
+
+        rawData = dataRows;
+        console.log(`✅ נטענו ${rawData.length} רשומות`);
+
+    
+parseEmployeeData();
+    lastFileData = data;
+    buildTlush();
+    document.getElementById('tabsArea').style.display = 'flex';
+    switchTab('tlush');
+    updateRunButton();
+    showMessage('');
+
+    } catch (error) {
+        console.error('שגיאה:', error);
+        showMessage('❌ שגיאה בטעינת הקובץ: ' + error.message, 'error');
+    }
+});
+
+async function loadEcology() {
+    try {
+        const response = await fetch('ecology.json');
+        ECOLOGY = await response.json();
+        console.log('✅ אקולוגיה נטענה:', ECOLOGY.meta.totalSymbols, 'סמלים');
+    } catch (error) {
+        console.error('❌ שגיאה בטעינת אקולוגיה:', error);
+    }
+}
+
+// קריאה בטעינת הדף
+loadEcology();
+// ============================================
+// פרסור נתוני עובד
+// ============================================
+function parseEmployeeData() {
+    employeeData = {
+        zehut: null,
+        misparOved: null,
+        misrad: null,
+        rows: rawData,
+        elements: {}
+    };
+
+    rawData.forEach(row => {
+        if (!employeeData.zehut) {
+            employeeData.zehut = row[COL.ZEHUT] || '';
+            employeeData.misparOved = row[COL.MISPAR_OVED] || '';
+            employeeData.misrad = row[COL.MISRAD] || '';
+        }
+
+        const semel = Number(row[COL.SEMEL] || 0);
+        if (!employeeData.elements[semel]) {
+            employeeData.elements[semel] = [];
+        }
+
+      employeeData.elements[semel].push({
+            semel: semel,
+            shemSemel: row[COL.SHEM_SEMEL] || '',
+            taarichSachar: row[COL.TAARICH_SACHAR] || '',
+            taarichErech: row[COL.TAARICH_ERECH] || '',
+            // שדות 1-4 (עמודות I-L)
+            schum: Number(row[COL.SCHUM] || 0),       // שדה 1
+            kamut: Number(row[COL.KAMUT] || 0),       // שדה 2
+            achuz: Number(row[COL.ACHUZ] || 0),       // שדה 3
+            taarif: Number(row[COL.TAARIF] || 0),     // שדה 4
+            // שדות 5-8 (עמודות M-P)
+            pratim: row[COL.PRATIM] || '',            // שדה 5
+            seifTaktziv: row[COL.SEIF_TAKTZIV] || '', // שדה 6
+            taarichM: row[COL.TAARICH_M] || '',       // שדה 7
+            taarichAd: row[COL.TAARICH_AD] || '',     // שדה 8
+            // שדות 9-16 (עמודות Q-X = VALUE_5 עד VALUE_12)
+            field9: Number(row[COL.VALUE_5] || 0),
+            field10: Number(row[COL.VALUE_6] || 0),
+            field11: Number(row[COL.VALUE_7] || 0),
+            field12: Number(row[COL.VALUE_8] || 0),
+            field13: Number(row[COL.VALUE_9] || 0),
+            field14: Number(row[COL.VALUE_10] || 0),
+            field15: Number(row[COL.VALUE_11] || 0),
+            field16: Number(row[COL.VALUE_12] || 0),
+            // שדות 17-24 (עמודות Y-AF = VALUE_13 עד VALUE_20)
+            field17: Number(row[COL.VALUE_13] || 0),
+            field18: Number(row[COL.VALUE_14] || 0),
+            field19: Number(row[COL.VALUE_15] || 0),
+            field20: Number(row[COL.VALUE_16] || 0),
+            field21: Number(row[COL.VALUE_17] || 0),
+            field22: Number(row[COL.VALUE_18] || 0),
+            field23: Number(row[COL.VALUE_19] || 0),
+            field24: Number(row[COL.VALUE_20] || 0),
+            // שדות 25-29 (עמודות AG-AK = VALUE_21 עד VALUE_24 + סכום שקלי)
+            field25: Number(row[COL.VALUE_21] || 0),
+            field26: Number(row[COL.VALUE_22] || 0),
+            field27: Number(row[COL.VALUE_23] || 0),
+            field28: Number(row[COL.VALUE_24] || 0),
+            schumShikli: Number(row[COL.SCHUM_SHIKLI] || 0),  // שדה 29
+        });
+    });
+
+    console.log('זהות:', employeeData.zehut);
+    console.log('מספר עובד:', employeeData.misparOved);
+    console.log('סמלים שנמצאו:', Object.keys(employeeData.elements).join(', '));
+}
+
+// ============================================
+// ניהול ממשק
+// ============================================
+function updateRunButton() {
+    const hasFile = rawData.length > 0;
+    const hasCheck = document.getElementById('checkType').value !== '';
+    document.getElementById('btnRun').disabled = !(hasFile && hasCheck);
+}
+
+document.getElementById('checkType').addEventListener('change', function() {
+    updateRunButton();
+    const type = this.value;
+    const instrEl = document.getElementById('instructionsArea');
+    if (type && checkInstructions[type]) {
+        instrEl.innerHTML = '📋 ' + checkInstructions[type].instructions;
+        instrEl.style.display = 'block';
+    } else {
+        instrEl.style.display = 'none';
+    }
+});
+
+function showMessage(text, type) {
+    const el = document.getElementById('messageArea');
+    if (!text) { el.style.display = 'none'; el.className = 'message'; return; }
+    el.textContent = text;
+    el.className = 'message ' + (type || 'info');
+    el.style.display = 'block';
+}
+
+// ============================================
+// הרצת בדיקה
+// ============================================
+function runCheck() {
+    const checkType = document.getElementById('checkType').value;
+    if (!checkType || rawData.length === 0) return;
+
+    showMessage('');
+    document.getElementById('resultsArea').style.display = 'none';
+
+    document.getElementById('employeeInfo').innerHTML =
+        `<span>👤 זהות: <strong>${employeeData.zehut}</strong></span>` +
+        `<span>מספר עובד: <strong>${employeeData.misparOved}</strong></span>` +
+        `<span>משרד: <strong>${employeeData.misrad}</strong></span>`;
+
+    let result = null;
+switch (checkType) {
+    case 'vatik':
+        result = checkVatik();
+        break;
+    case 'nihul4517':
+        result = checkNihul4517();
+        break;
+case 'check161':
+    result = check161();
+    break;
+    case 'bruto91025':
+     result = check91025();
+     break;
+     case 'checkTax':
+    result = checkTax();
+    break;
+    case 'checkBituachLeumi':
+    result = checkBituachLeumi();
+    break;
+    case 'checkGilum':
+    result = checkGilum();
+    break;
+    default:
+        if (SIMPLE_RULES[checkType]) {
+            result = checkSimpleRule(checkType);
+        } else {
+            showMessage('סוג בדיקה לא מוכר', 'error');
+        }
+        break;
+}
+
+    if (result) {
+        document.getElementById('resultTitle').textContent = result.title;
+        document.getElementById('explanationText').innerHTML = result.explanation;
+        document.getElementById('resultsArea').style.display = 'block';
+    }
+}
+
+// ============================================
+// פונקציות עזר - קריאת ותק
+// ============================================
+
+/** פורמט א' (998, 55, 999) - שנים וחודשים בשדה סכום. למשל 38.25 = 38 שנים + 3 חודשים */
+function parseVatikFormatA(schum) {
+    const years = Math.floor(schum);
+    const months = Math.round((schum - years) * 12);
+    return { years, months };
+}
+
+/** פורמט ב' (1, 2, 794, 20) - שנים בסכום, חודשים באחוז */
+function parseVatikFormatB(schum, achuz) {
+    const years = Math.floor(schum);
+    const months = Math.round(achuz);
+    return { years, months };
+}
+
+/** פורמט ותק לטקסט קריא */
+function formatVatik(vatik) {
+    if (vatik.years === 0 && vatik.months === 0) return '0';
+    let parts = [];
+    if (vatik.years > 0) parts.push(`${vatik.years} שנים`);
+    if (vatik.months > 0) parts.push(`${vatik.months} חודשים`);
+    return parts.join(' ו-');
+}
+
+// ============================================
+// בדיקה: תוספת ותק
+// ============================================
+function checkVatik() {
+    const VATIK_ELEMENT = 90146;
+
+    const vatikRows = employeeData.elements[VATIK_ELEMENT];
+
+    if (!vatikRows || vatikRows.length === 0) {
+        showMessage('לא נמצאו נתוני ותק (סמל 90146) עבור עובד זה.', 'warning');
+        return null;
+    }
+
+    console.log('שורות ותק:', vatikRows.length);
+    console.table(vatikRows.map(r => ({ כמות: r.kamut, סכום: r.schum, אחוז: r.achuz, תעריף: r.taarif })));
+
+    // מיפוי סוגי ותק
+    const vatikTypes = {
+        1:   { name: 'ותק התחלתי מדווח', format: 'B', note: 'עובד שהתחיל לפני 1.1.2012 צפוי שיהיה לו ותק מסוג זה.' },
+        2:   { name: 'ותק שירות חובה', format: 'B', note: '' },
+        24:   { name: 'ותק מקצועי', format: 'B', note: '' },
+        20:  { name: 'ותק ציבורי', format: 'B', note: 'ותק שנצבר בשירות ציבורי קודם.' },
+        55:  { name: 'ותק בשנת פרישה', format: 'A', note: '' },
+        794: { name: 'מחצית ותק תואר שני', format: 'B', note: 'מחצית מתקופת הלימודים לתואר שני.' },
+        999: { name: 'ותק מחושב', format: 'A', note: 'ותק שנצבר מתחילת ההעסקה או מתחילת דיווח אחרון של ותק התחלתי.' },
+        998: { name: 'סה"כ ותק למשרד', format: 'A', note: '' }
+    };
+
+    let components = [];
+    let totalVatik = null;
+
+    vatikRows.forEach(row => {
+     const typeKey = Math.floor(row.schum);
+        const typeDef = vatikTypes[typeKey];
+if (!typeDef) return;
+
+let vatik;
+if (typeDef.format === 'A') {
+    vatik = parseVatikFormatA(row.kamut);
+} else {
+    vatik = parseVatikFormatB(row.kamut, row.achuz);
+}
+        const entry = {
+            type: typeKey,
+            typeName: typeDef ? typeDef.name : `ותק מסוג ${typeKey}`,
+            vatik: vatik,
+            note: typeDef ? typeDef.note : '',
+            raw: row
+        };
+
+        if (typeKey === 998) {
+            totalVatik = entry;
+        } else {
+            components.push(entry);
+        }
+    });
+
+    components.sort((a, b) => a.type - b.type);
+
+    // בניית הסבר מילולי
+    let explanation = '';
+
+    if (totalVatik) {
+        explanation += `<span class="total">סה"כ הוותק המוכר למשרד הוא ${formatVatik(totalVatik.vatik)}.</span>\n\n`;
+        explanation += `הוותק מוזן באירוע 90146  :\n\n`;
+        explanation += `בנתונים הכספיים של העובד ראה נתון עזר 90146:\n\n`;
+        explanation += `הוותק מורכב מהרכיבים הבאים:\n\n`;
+    } else {
+        explanation += `להלן פירוט רכיבי הוותק שנמצאו:\n\n`;
+    }
+
+    if (components.length === 0) {
+        explanation += `לא נמצאו רכיבי ותק פרטניים.`;
+    }
+
+    components.forEach(comp => {
+        explanation += `<span class="highlight">${comp.typeName}</span> (סוג ${comp.type}): ${formatVatik(comp.vatik)}`;
+        if (comp.note) {
+            explanation += `\n<span class="note">📌 ${comp.note}</span>`;
+        }
+        explanation += `\n\n`;
+    });
+
+    // סיכום
+    if (totalVatik && components.length > 0) {
+        let sumYears = 0, sumMonths = 0;
+        components.forEach(comp => {
+            sumYears += comp.vatik.years;
+            sumMonths += comp.vatik.months;
+        });
+        sumYears += Math.floor(sumMonths / 12);
+        sumMonths = sumMonths % 12;
+
+        explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        explanation += `סכום הרכיבים: ${formatVatik({ years: sumYears, months: sumMonths })}\n`;
+        explanation += `סה"כ ותק למשרד (998): ${formatVatik(totalVatik.vatik)}\n`;
+
+        const totalMonths = totalVatik.vatik.years * 12 + totalVatik.vatik.months;
+        const sumTotalMonths = sumYears * 12 + sumMonths;
+
+        if (totalMonths === sumTotalMonths) {
+            explanation += `\n✅ סכום הרכיבים תואם את הסה"כ.`;
+        } else {
+            const diff = Math.abs(totalMonths - sumTotalMonths);
+            const diffVatik = { years: Math.floor(diff / 12), months: diff % 12 };
+            explanation += `\n⚠️ קיים פער של ${formatVatik(diffVatik)} בין סכום הרכיבים לסה"כ.`;
+        }
+    }
+
+    return {
+        title: '📊 הסבר תוספת ותק',
+        explanation: explanation
+    };
+}
+function excelDateToDate(serial) {
+    if (!serial || isNaN(serial)) return null;
+    const date = new Date((serial - 25569) * 86400 * 1000);
+    return date;
+}
+
+function formatMonthYear(serial) {
+    const date = excelDateToDate(serial);
+    if (!date) return String(serial);
+    const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+    return months[date.getMonth()] + '.' + date.getFullYear();
+}
+function checkNihul4517() {
+    const SEMEL_9517 = 9517;
+    const SEMEL_4517 = 4517;
+    const SEMEL_684 = 684;
+
+    const rows9517 = employeeData.elements[SEMEL_9517];
+    const rows4517 = employeeData.elements[SEMEL_4517];
+    const rows684 = employeeData.elements[SEMEL_684];
+
+    if (!rows9517 || rows9517.length === 0) {
+        showMessage('לא נמצאו נתוני סמל 9517 עבור עובד זה.', 'warning');
+        return null;
+    }
+
+    // זיהוי חודש תשלום נוכחי (תאריך שכר - עמודה G)
+    const allSalaryDates = rawData.map(r => Number(r[COL.TAARICH_SACHAR])).filter(d => d > 0);
+    const currentSalaryDate = Math.max(...allSalaryDates);
+    const currentDate = excelDateToDate(currentSalaryDate);
+    
+    // 3 חודשי ערך שקדמו לחודש התשלום
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    const validMonths = [];
+    for (let i = 1; i <= 3; i++) {
+        let m = currentMonth - i;
+        let y = currentYear;
+        while (m < 0) { m += 12; y--; }
+        validMonths.push({ month: m, year: y });
+    }
+
+    function isValidMonth(serial) {
+        const d = excelDateToDate(serial);
+        if (!d) return false;
+        return validMonths.some(vm => vm.month === d.getMonth() && vm.year === d.getFullYear());
+    }
+
+    // סינון רק 9517 עם תאריך ערך ב-3 החודשים הרלוונטיים
+    const monthlyTotals = {};
+    rows9517.forEach(row => {
+        if (!isValidMonth(row.taarichErech)) return;
+        const key = formatMonthYear(row.taarichErech);
+        if (!monthlyTotals[key]) {
+            monthlyTotals[key] = { schum: 0, rows: 0 };
+        }
+        monthlyTotals[key].schum += row.schum;
+        monthlyTotals[key].rows++;
+    });
+
+    const months = Object.keys(monthlyTotals).sort();
+
+    // אחוזים
+    const achuz4517 = rows4517 && rows4517.length > 0 ? rows4517[0].achuz : null;
+    const achuz684 = rows684 && rows684.length > 0 ? rows684[0].kamut : null;
+
+    // סכום 4517 בפועל
+   let schum4517 = 0;
+if (rows4517) {
+    rows4517.forEach(row => {
+        if (Number(row.taarichSachar) === currentSalaryDate && Number(row.taarichErech) === currentSalaryDate) {
+            schum4517 += row.schum;
+        }
+    });
+}
+
+    // חישוב ממוצע
+    let totalSchum = 0;
+    months.forEach(m => { totalSchum += monthlyTotals[m].schum; });
+    const total3Months = totalSchum;
+
+    // בניית הסבר
+    let explanation = '';
+    explanation += `מענק ניהול ייצור (4517) הוא מענק רבעוני המחושב כממוצע של שלושת החודשים האחרונים.\n\n`;
+    explanation += `חודש תשלום נוכחי: <span class="highlight">${formatMonthYear(currentSalaryDate)}</span>\n\n`;
+
+    if (achuz684 !== null && achuz4517 !== null) {
+        const achuz9517 = (achuz684 / 100 + 1) * achuz4517;
+        explanation += `הברוטו החודשי נשמר בסמל 9517 ומחושב כך:\n`;
+        explanation += `<span class="highlight">אחוז 9517</span> = (אחוז 684 [${achuz684}] / 100 + 1) × אחוז 4517 [${achuz4517}] = ${achuz9517.toFixed(2)}\n`;
+        explanation += `<span class="highlight">סכום 9517</span> = תעריף × אחוז / 3\n\n`;
+    }
+
+    explanation += `פירוט לפי חודש ערך:\n`;
+    if (months.length !== 3) {
+        explanation += `<span class="note">⚠️ נמצאו ${months.length} חודשי ערך במקום 3!</span>\n`;
+    }
+
+    months.forEach(m => {
+        const data = monthlyTotals[m];
+        explanation += `<span class="highlight">${m}</span>: סה"כ 9517 = ${data.schum.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח`;
+        if (data.rows > 1) {
+            explanation += ` (${data.rows} שורות)`;
+        }
+        explanation += `\n`;
+    });
+
+    explanation += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  explanation += `סה"כ 9517 ל-${months.length} חודשים: ${total3Months.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+    explanation += `סכום 4517 בפועל: ${schum4517.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+
+    const diff = Math.abs(schum4517 - total3Months);
+    if (diff < 1) {
+        explanation += `\n✅ סכום 4517 תואם את ממוצע 3 החודשים.`;
+    } else {
+        explanation += `\n⚠️ קיים פער של ${diff.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח בין הסכום בפועל לממוצע.`;
+    }
+
+    return {
+        title: '📊 הסבר מענק תוספת ניהול (4517)',
+        explanation: explanation
+    };
+}
+function check91025() {
+    const SEMEL_91025 = 91025;
+    const SEMEL_BASIC = 1;  // שכר יסוד
+    const TOLERANCE = 0.5;
+    
+    // שליפת 91025
+    const rows91025 = employeeData.elements[SEMEL_91025];
+    if (!rows91025 || rows91025.length === 0) {
+        showMessage('לא נמצא סמל 91025 (ברוטו פנסיה) עבור עובד זה.', 'warning');
+        return null;
+    }
+    
+    // זיהוי חודש נוכחי
+    const allSalaryDates = rawData.map(r => Number(r[COL.TAARICH_SACHAR])).filter(d => d > 0);
+    const currentSalaryDate = Math.max(...allSalaryDates);
+    
+    // מציאת ערך 91025 השוטף (לא רטרואקטיבי)
+    const current91025 = rows91025.find(r => 
+        Number(r.taarichSachar) === currentSalaryDate && 
+        Number(r.taarichErech) === currentSalaryDate
+    );
+    
+    const targetBruto = current91025 ? current91025.schum : 0;
+    
+    if (targetBruto === 0) {
+        showMessage('לא נמצא ברוטו פנסיה שוטף (91025) לחודש הנוכחי.', 'warning');
+        return null;
+    }
+    
+    // איסוף כל התוספות השוטפות
+    const additions = [];
+    for (const [semel, rows] of Object.entries(employeeData.elements)) {
+        const semelNum = Number(semel);
+        if (semelNum >= 90000) continue;  // לא סמלי סיכום
+        
+        rows.forEach(row => {
+            if (Number(row.taarichSachar) === currentSalaryDate && 
+                Number(row.taarichErech) === currentSalaryDate &&
+                row.schum > 0) {
+                additions.push({
+                    code: semelNum,
+                    name: row.shemSemel || `סמל ${semelNum}`,
+                    amount: row.schum,
+                    tariff: row.taarif || 0
+                });
+            }
+        });
+    }
+    
+    // שלב 1: מציאת שכר יסוד
+    const basicSalary = additions.find(a => a.code === SEMEL_BASIC);
+    if (!basicSalary) {
+        showMessage('לא נמצא שכר יסוד (סמל 1) - לא ניתן לנתח הרכבה.', 'warning');
+        return null;
+    }
+    
+    // בניית שרשרת
+    let chain = [{
+        code: basicSalary.code,
+        name: basicSalary.name,
+        amount: basicSalary.amount,
+        tariff: basicSalary.tariff,
+        type: 'base',
+        runningTotal: basicSalary.amount
+    }];
+    
+    let runningTotal = basicSalary.amount;
+    let usedCodes = new Set([SEMEL_BASIC]);
+    
+    // שלב 2: בניית שרשרת היררכית
+    let foundNew = true;
+    while (foundNew) {
+        foundNew = false;
+        
+        for (const addition of additions) {
+            if (usedCodes.has(addition.code)) continue;
+            
+            // בדיקה: האם התעריף שווה לסכום מצטבר?
+            const matchesRunningTotal = Math.abs(addition.tariff - runningTotal) < TOLERANCE;
+            const matchesAnyTotal = chain.some(step => 
+                Math.abs(addition.tariff - step.runningTotal) < TOLERANCE
+            );
+            
+            if (matchesRunningTotal || matchesAnyTotal) {
+                runningTotal += addition.amount;
+                chain.push({
+                    code: addition.code,
+                    name: addition.name,
+                    amount: addition.amount,
+                    tariff: addition.tariff,
+                    type: 'hierarchical',
+                    runningTotal: runningTotal
+                });
+                usedCodes.add(addition.code);
+                foundNew = true;
+            }
+        }
+    }
+    
+    // שלב 3: PLUG - סגירת פער
+    let gap = targetBruto - runningTotal;
+    
+    if (Math.abs(gap) > TOLERANCE) {
+        for (const addition of additions) {
+            if (usedCodes.has(addition.code)) continue;
+            
+            if (Math.abs(addition.amount - gap) < TOLERANCE) {
+                // בדיקה שזו תוספת פנסיונית
+                const isPension = !NON_PENSION_KEYWORDS.some(kw => 
+                    addition.name.includes(kw)
+                );
+                
+                if (isPension) {
+                    runningTotal += addition.amount;
+                    chain.push({
+                        code: addition.code,
+                        name: addition.name,
+                        amount: addition.amount,
+                        tariff: addition.tariff,
+                        type: 'plug',
+                        runningTotal: runningTotal
+                    });
+                    usedCodes.add(addition.code);
+                    gap = targetBruto - runningTotal;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // בניית רשימת תוספות שלא נכללו
+    const excluded = additions.filter(a => !usedCodes.has(a.code)).map(a => {
+        const isNonPension = NON_PENSION_KEYWORDS.some(kw => a.name.includes(kw));
+        return {
+            ...a,
+            reason: isNonPension ? 'רכיב לא-פנסיוני' : 'לא התאים לשרשרת'
+        };
+    });
+    
+    // בניית הסבר
+    let explanation = '';
+    explanation += `ברוטו פנסיה (91025) מורכב מתוספות פנסיוניות הנבנות בהיררכיה.\n`;
+    explanation += `כל תוספת מחושבת על בסיס סכום התוספות שקדמו לה (שדה תעריף).\n\n`;
+    explanation += `חודש: <span class="highlight">${formatMonthYear(currentSalaryDate)}</span>\n`;
+    explanation += `ברוטו פנסיה בפועל: <span class="highlight">${targetBruto.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+    
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    explanation += `📊 שרשרת הרכבת הברוטו הפנסיוני:\n`;
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    
+    const typeLabels = {
+        'base': '🔵 בסיס',
+        'hierarchical': '🟢 היררכי',
+        'plug': '🟡 PLUG'
+    };
+    
+    chain.forEach((step, index) => {
+        const typeLabel = typeLabels[step.type];
+        const tariffInfo = step.type === 'base' ? '' : 
+                          step.type === 'plug' ? '(תוספת סכומית)' : 
+                          `← תעריף: ${step.tariff.toLocaleString('he-IL')}`;
+        
+        explanation += `${typeLabel} <span class="highlight">${step.code}</span> ${step.name}\n`;
+        explanation += `   סכום: +${step.amount.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪ ${tariffInfo}\n`;
+        explanation += `   <span class="total">סה"כ מצטבר: ${step.runningTotal.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+    });
+    
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    explanation += `סה"כ מחושב: <span class="highlight">${runningTotal.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n`;
+    explanation += `ברוטו פנסיה בפועל: <span class="highlight">${targetBruto.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n`;
+    
+    const finalGap = Math.abs(targetBruto - runningTotal);
+    if (finalGap < TOLERANCE) {
+        explanation += `\n<span class="total">✅ ההרכבה תואמת את הברוטו הפנסיוני!</span>`;
+    } else {
+        explanation += `\n<span class="note">⚠️ פער של ${finalGap.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>`;
+    }
+    
+   
+    return {
+        title: '📊 הרכבת ברוטו פנסיה (91025)',
+        explanation: explanation
+    };
+}
+// ============================================
+// בדיקה: מס הכנסה
+// ============================================
+// ============================================
+// בדיקה: מס הכנסה ונקודות זיכוי
+// ============================================
+function checkTax() {
+    // סמל ניכוי מס הכנסה
+    const rows91003 = employeeData.elements[91003];
+    
+    // סמלי נקודות זיכוי
+    const rows91430 = employeeData.elements[91430];
+    const rows91434 = employeeData.elements[91434];
+    const rows91435 = employeeData.elements[91435];
+    const rows91436 = employeeData.elements[91436];
+    
+    if (!rows91003 || rows91003.length === 0) {
+        showMessage('לא נמצא סמל 91003 (ניכוי מס הכנסה) עבור עובד זה.', 'warning');
+        return null;
+    }
+    
+    const taxActual = rows91003[0].schum;
+    
+    // בניית הסבר
+    let explanation = '';
+    explanation += `בדיקת ניכוי מס הכנסה - לוח ניכויים ${TAX_TABLES.meta.year}\n\n`;
+    
+    // ניכוי מס בפועל
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    explanation += `💰 ניכוי מס הכנסה (סמל 91003)\n`;
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    explanation += `סכום שנוכה: <span class="highlight">${taxActual.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+    
+  // נתוני מס מסמל 91430
+    if (rows91430 && rows91430.length > 0) {
+        const r = rows91430[0];
+        
+        explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        explanation += `🎯 נתוני מס כלליים (סמל 91430)\n`;
+        explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        
+        // שדה 1 = schum = נקודות בחודש
+        if (r.schum > 0) explanation += `נקודות זיכוי בחודש: <span class="highlight">${r.schum}</span>\n`;
+        // שדה 9 = field13 (value_9) = אחוז שולי מדרגות
+        if (r.field13 > 0) explanation += `אחוז מס שולי (מדרגות): <span class="highlight">${(r.field13 * 100).toFixed(0)}%</span>\n`;
+        // שדה 12 = field16 (value_12) = אחוז שולי בחודש
+        if (r.field16 > 0) explanation += `אחוז מס שולי בחודש: <span class="highlight">${(r.field16 * 100).toFixed(0)}%</span>\n`;
+        // שדה 13 = field17 (value_13) = אחוז זיכוי יישוב
+        if (r.field17 > 0) explanation += `הטבת יישוב מוטב: <span class="highlight">${(r.field17 * 100).toFixed(0)}%</span> הנחה ממס\n`;
+        // שדה 14 = field18 (value_14) = נקודות זיכוי מצטברות
+        if (r.field18 > 0) explanation += `נקודות זיכוי מצטברות: <span class="highlight">${r.field18}</span>\n`;
+        
+        explanation += `\n`;
+    }
+    
+    // פירוט נקודות זיכוי חודשיות מסמל 91434
+    if (rows91434 && rows91434.length > 0) {
+        const r = rows91434[0];
+        
+        explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        explanation += `📋 פירוט נקודות זיכוי חודשיות (סמל 91434)\n`;
+        explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        
+        let totalPoints = 0;
+        let hasPoints = false;
+        
+        // שדה 1 = schum = נק׳ תושב בחודש
+        if (r.schum > 0) {
+            explanation += `• נק׳ תושב: <span class="highlight">${r.schum}</span> (תושב ישראל)\n`;
+            totalPoints += r.schum;
+            hasPoints = true;
+        }
+        // שדה 2 = kamut = נק׳ צעיר בחודש
+        if (r.kamut > 0) {
+            explanation += `• נק׳ צעיר: <span class="highlight">${r.kamut}</span> (גיל 16-18)\n`;
+            totalPoints += r.kamut;
+            hasPoints = true;
+        }
+        // שדה 3 = achuz = נק׳ ילד 0+18 בדחיה
+        if (r.achuz > 0) {
+            explanation += `• נק׳ ילד 0/18: <span class="highlight">${r.achuz}</span> (ילד גיל 0 או 18 בדחיה)\n`;
+            totalPoints += r.achuz;
+            hasPoints = true;
+        }
+        // שדה 4 = taarif = נק׳ ילד 6-17
+        if (r.taarif > 0) {
+            explanation += `• נק׳ ילד 6-17: <span class="highlight">${r.taarif}</span>\n`;
+            totalPoints += r.taarif;
+            hasPoints = true;
+        }
+        // שדה 5 = field9 = נק׳ חד הורי
+        if (r.field9 > 0) {
+            explanation += `• נק׳ חד הורי: <span class="highlight">${r.field9}</span> (משפחה חד הורית)\n`;
+            totalPoints += r.field9;
+            hasPoints = true;
+        }
+        // שדה 6 = field10 = נק׳ בן/בת זוג
+        if (r.field10 > 0) {
+            explanation += `• נק׳ בן/בת זוג: <span class="highlight">${r.field10}</span> (בן זוג ללא הכנסה)\n`;
+            totalPoints += r.field10;
+            hasPoints = true;
+        }
+        // שדה 7 = field11 = נק׳ חייל
+        if (r.field11 > 0) {
+            explanation += `• נק׳ חייל משוחרר: <span class="highlight">${r.field11}</span>\n`;
+            totalPoints += r.field11;
+            hasPoints = true;
+        }
+        // שדה 8 = field12 = נק׳ עולה
+        if (r.field12 > 0) {
+            explanation += `• נק׳ עולה חדש: <span class="highlight">${r.field12}</span>\n`;
+            totalPoints += r.field12;
+            hasPoints = true;
+        }
+        // שדה 9 = field13 = נק׳ אקדמי
+        if (r.field13 > 0) {
+            explanation += `• נק׳ לימודים לתואר: <span class="highlight">${r.field13}</span>\n`;
+            totalPoints += r.field13;
+            hasPoints = true;
+        }
+        
+        if (!hasPoints) {
+            explanation += `<span class="note">לא נמצאו נקודות זיכוי מפורטות</span>\n`;
+        } else {
+            explanation += `\n`;
+            explanation += `סה"כ נקודות בחודש: <span class="total">${totalPoints.toFixed(2)}</span>\n`;
+            explanation += `שווי זיכוי: <span class="total">${(totalPoints * TAX_TABLES.creditPoint.monthly).toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n`;
+        }
+        
+        explanation += `\n`;
+    }
+    
+    // נקודות מצטברות מסמל 91435
+    if (rows91435 && rows91435.length > 0) {
+        const r = rows91435[0];
+        
+        let hasCumulative = false;
+        let cumulativeText = '';
+        
+        // שדה 1 = schum = נק׳ פעוט 1-5 מצטבר
+        if (r.schum > 0) {
+            cumulativeText += `• נק׳ פעוט 1-5 מצטבר: <span class="highlight">${r.schum}</span>\n`;
+            hasCumulative = true;
+        }
+        // שדה 2 = kamut = נק׳ חד הורי מצטבר
+        if (r.kamut > 0) {
+            cumulativeText += `• נק׳ חד הורי מצטבר: <span class="highlight">${r.kamut}</span>\n`;
+            hasCumulative = true;
+        }
+        // שדה 3 = achuz = נק׳ בן זוג מצטבר
+        if (r.achuz > 0) {
+            cumulativeText += `• נק׳ בן זוג מצטבר: <span class="highlight">${r.achuz}</span>\n`;
+            hasCumulative = true;
+        }
+        
+        if (hasCumulative) {
+            explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            explanation += `📊 נקודות זיכוי מצטברות (סמל 91435)\n`;
+            explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            explanation += cumulativeText;
+            explanation += `\n`;
+        }
+    }
+    
+    // מידע נוסף
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    explanation += `ℹ️ מידע כללי\n`;
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    explanation += `ערך נקודת זיכוי חודשית: <span class="highlight">${TAX_TABLES.creditPoint.monthly} ₪</span>\n`;
+    explanation += `סף מס יסף: <span class="highlight">${TAX_TABLES.additionalTax.threshold.toLocaleString('he-IL')} ₪</span> (${TAX_TABLES.additionalTax.rate * 100}% נוסף)\n`;
+    
+    return {
+        title: '📊 בדיקת ניכוי מס הכנסה ונקודות זיכוי',
+        explanation: explanation
+    };
+}
+// ============================================
+// בדיקה: ביטוח לאומי ומס בריאות
+// ============================================
+// ============================================
+// בדיקה: ביטוח לאומי ומס בריאות
+// ============================================
+function checkBituachLeumi() {
+    const rows91001 = employeeData.elements[91001];
+    const rows92041 = employeeData.elements[92041];
+    const rows91013 = employeeData.elements[91013];
+    const rows91015 = employeeData.elements[91015];
+    const rows94010 = employeeData.elements[94010];
+    
+    let explanation = '';
+    explanation += `בדיקת ניכויי ביטוח לאומי ומס בריאות\n\n`;
+    
+    // ביטוח לאומי - סמל 91001
+    if (rows91001 && rows91001.length > 0) {
+        const r = rows91001[0];
+        
+        explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        explanation += `🏛️ ביטוח לאומי (סמל 91001)\n`;
+        explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        
+        explanation += `סכום ניכוי בפועל: <span class="highlight">${r.schum.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+        
+        explanation += `<strong>חישוב בשיעור מופחת:</strong>\n`;
+        explanation += `• סכום חייב: ${r.field9.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪\n`;
+        explanation += `• שיעור: ${(r.achuz ).toFixed(2)}%\n`;
+        explanation += `• תוצאה: <span class="highlight">${r.field13.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+        
+        explanation += `<strong>חישוב בשיעור מלא:</strong>\n`;
+        explanation += `• סכום חייב: ${r.field10.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪\n`;
+        explanation += `• שיעור: ${(r.taarif).toFixed(2)}%\n`;
+        explanation += `• תוצאה: <span class="highlight">${r.field14.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+        
+        const total = r.field13 + r.field14;
+        explanation += `סה"כ מחושב: <span class="total">${total.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n`;
+        
+        const diff = Math.abs(r.schum - total);
+        if (diff < 1) {
+            explanation += `<span class="total">✅ תואם לניכוי בפועל</span>\n`;
+        } else {
+            explanation += `<span class="note">⚠️ הפרש של ${diff.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n`;
+        }
+        
+        explanation += `\n`;
+    } else {
+        explanation += `<span class="note">לא נמצא סמל 91001 (ביטוח לאומי)</span>\n\n`;
+    }
+    
+    // מס בריאות - סמל 92041
+    if (rows92041 && rows92041.length > 0) {
+        const r = rows92041[0];
+        
+        explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        explanation += `🏥 מס בריאות (סמל 92041)\n`;
+        explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        
+        explanation += `סכום ניכוי בפועל: <span class="highlight">${r.schum.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+        
+        explanation += `<strong>חישוב בשיעור מופחת:</strong>\n`;
+        explanation += `• סכום חייב: ${r.field9.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪\n`;
+        explanation += `• שיעור: ${(r.achuz ).toFixed(2)}%\n`;
+        explanation += `• תוצאה: <span class="highlight">${r.field13.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+        
+        explanation += `<strong>חישוב בשיעור מלא:</strong>\n`;
+        explanation += `• סכום חייב: ${r.field10.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪\n`;
+        explanation += `• שיעור: ${(r.taarif ).toFixed(2)}%\n`;
+        explanation += `• תוצאה: <span class="highlight">${r.field14.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+        
+        const total = r.field13 + r.field14;
+        explanation += `סה"כ מחושב: <span class="total">${total.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n`;
+        
+        const diff = Math.abs(r.schum - total);
+        if (diff < 1) {
+            explanation += `<span class="total">✅ תואם לניכוי בפועל</span>\n`;
+        } else {
+            explanation += `<span class="note">⚠️ הפרש של ${diff.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n`;
+        }
+        
+        explanation += `\n`;
+    } else {
+        explanation += `<span class="note">לא נמצא סמל 92041 (מס בריאות)</span>\n\n`;
+    }
+    
+// תשלומים חד פעמיים - סמל 91013 + 91015
+    if (rows91013 && rows91013.length > 0 && rows91015 && rows91015.length > 0) {
+        explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        explanation += `💰 תשלומים חד פעמיים (סמל 91013)\n`;
+        explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        
+        explanation += `<span class="highlight">החודש שולמו לך תשלומים חד פעמיים.</span>\n\n`;
+        explanation += `תשלום שסכומו עולה על רבע משכר מינימום חייב בפריסת ברוטו ביטוח לאומי ל-12 חודשים אחורה.\n`;
+        explanation += `לכן, תשלום בגין תשלומים אלו נפרס ל-12 תשלומים שווים, כאשר ה-1/12 התווסף לברוטו ביטוח לאומי השוטף.\n\n`;
+        
+        // ברוטו ביטוח לאומי - רק שוטף (תאריך שכר = תאריך ערך)
+        if (rows94010 && rows94010.length > 0) {
+            const shotef94010 = rows94010.find(r => r.taarichSachar === r.taarichErech);
+            if (shotef94010) {
+                explanation += `ברוטו ביטוח לאומי (סמל 94010): <span class="highlight">${shotef94010.schum.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+            }
+        }
+        
+        // סכום הפריסה
+        explanation += `סכום הפריסה - 1/12 (סמל 91015): <span class="highlight">${rows91015[0].schum.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+        
+        // פירוט הסמלים החד פעמיים
+        explanation += `<strong>פירוט תשלומים חד פעמיים שנפרסו:</strong>\n`;
+        
+        rows91013.forEach(row => {
+            const semelNum = Math.round(row.kamut);  // מספר הסמל בשדה כמות
+            const semelAmount = row.schum;           // הסכום בשדה סכום
+            // חיפוש שם הסמל
+            let semelName = '';
+            if (employeeData.elements[semelNum] && employeeData.elements[semelNum].length > 0) {
+                semelName = employeeData.elements[semelNum][0].shemSemel || '';
+            }
+            explanation += `• סמל ${semelNum}${semelName ? ' - ' + semelName : ''}: ${semelAmount.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪\n`;
+        });
+        
+        explanation += `\n`;
+    }
+    
+    return {
+        title: '📊 בדיקת ביטוח לאומי ומס בריאות',
+        explanation: explanation
+    };
+}
+// פונקציה שבודקת אם סמל שייך לבדיקה מורכבת
+function getComplexCheckType(semelNum) {
+    const num = Number(semelNum);
+    
+    // בדיקה ב-COMPLEX_RULES_MAP
+    if (COMPLEX_RULES_MAP[num]) {
+        return COMPLEX_RULES_MAP[num];
+    }
+    
+    // בדיקה בטווחים
+    for (const range of COMPLEX_RULES_RANGES) {
+        if (num >= range.from && num <= range.to) {
+            return range.check;
+        }
+    }
+    
+    return null;
+}
+// ============================================
+// בדיקה: גילומים
+// ============================================
+function checkGilum() {
+    const rows91400 = employeeData.elements[91400];
+    const rows91430 = employeeData.elements[91430];
+    const rows91001 = employeeData.elements[91001];
+    const rows92041 = employeeData.elements[92041];
+    
+    // חישוב סה"כ גילום מס (סמלים 8000-8099) - כל החודשים
+    let totalGilumMas = 0;
+    for (let semel = 8000; semel <= 8099; semel++) {
+        if (employeeData.elements[semel]) {
+            employeeData.elements[semel].forEach(row => {
+                totalGilumMas += row.schum;
+            });
+        }
+    }
+    
+    // חישוב סה"כ גילום ביטוח לאומי (סמלים 8100-8199) - כל החודשים
+    let totalGilumBL = 0;
+    for (let semel = 8100; semel <= 8199; semel++) {
+        if (employeeData.elements[semel]) {
+            employeeData.elements[semel].forEach(row => {
+                totalGilumBL += row.schum;
+            });
+        }
+    }
+    
+    // אם אין גילומים בכלל
+    if (totalGilumMas === 0 && totalGilumBL === 0) {
+        return {
+            title: '📊 בדיקת גילומים',
+            explanation: 'לא נמצאו גילומים עבור עובד זה בנתונים שהועלו.'
+        };
+    }
+    
+    // נטו לגילום סופי מסמל 91400 שדה אחוז - סכום כל החודשים
+    let netoLegilumSofi = 0;
+    if (rows91400 && rows91400.length > 0) {
+        rows91400.forEach(row => {
+            netoLegilumSofi += row.achuz;
+        });
+    }
+    
+    // אחוז מס שולי מסמל 91430 שדה 9 - רק שוטף (שכר=ערך)
+    let achuzMasShuli = 0;
+    if (rows91430 && rows91430.length > 0) {
+        const shotef = rows91430.find(r => r.taarichSachar === r.taarichErech);
+        if (shotef) {
+            achuzMasShuli = shotef.field13 || 0;
+        }
+    }
+    
+    // אחוז ב"ל גבוה = 91001 תעריף - רק שוטף (שכר=ערך)
+    let achuzBL91001 = 0;
+    if (rows91001 && rows91001.length > 0) {
+        const shotef = rows91001.find(r => r.taarichSachar === r.taarichErech);
+        if (shotef) {
+            achuzBL91001 = shotef.taarif || 0;
+        }
+    }
+    
+    // אחוז בריאות גבוה = 92041 תעריף - רק שוטף (שכר=ערך)
+    let achuzBL92041 = 0;
+    if (rows92041 && rows92041.length > 0) {
+        const shotef = rows92041.find(r => r.taarichSachar === r.taarichErech);
+        if (shotef) {
+            achuzBL92041 = shotef.taarif || 0;
+        }
+    }
+    
+    const achuzBLTotal = achuzBL91001 + achuzBL92041;
+    
+    // נרמול אחוז ב"ל לעשרוני אם צריך
+    const achuzBLTotalDecimal = achuzBLTotal > 1 ? achuzBLTotal / 100 : achuzBLTotal;
+    
+    // חישוב לאחור - הסכום ההתחלתי
+    const schumHatchali = netoLegilumSofi - totalGilumBL;
+    
+    // בדיקת נטו לגילום התחלתי מול סמלים בפועל
+    let netoHatchaliBedikat = 0;
+    let gilumSourceDetails = [];
+    
+    // מילות מפתח לזיהוי סמלים מגולמים - כל תנאי הוא מערך של מילים שכולן צריכות להופיע
+    const gilumKeywords = [
+        { words: ['ביטוח', 'מקיף'], reason: 'ביטוח מקיף' },
+        { words: ['ביטוח', 'חובה'], reason: 'ביטוח חובה' },
+        { words: ['רכב', 'משתנות'], reason: 'רכב משתנות' },
+        { words: ['רכב', 'קבועות', 'נטו'], reason: 'רכב קבועות נטו' },
+        { words: ['דמ"ח'], reason: 'דמ"ח' },
+        { words: ['מגולם'], reason: 'מגולם' }
+    ];
+    
+    // עבור על כל הסמלים
+    for (const semel in employeeData.elements) {
+        const semelNum = Number(semel);
+        
+        // דלג על סמלי גילום (8000-9000)
+        if (semelNum >= 8000 && semelNum <= 9000) continue;
+        
+        employeeData.elements[semel].forEach(row => {
+            let shouldInclude = false;
+            let reason = '';
+            
+            // בדיקה 1: סמלים בטווח 5100-5199 (זקיפות מגולמות)
+            if (semelNum >= 5100 && semelNum <= 5199) {
+                shouldInclude = true;
+                reason = 'זקיפה מגולמת (5100-5199)';
+            }
+            
+            // בדיקה 2: שם הסמל מכיל מילות מפתח
+            if (!shouldInclude && row.shemSemel) {
+                for (const keywordObj of gilumKeywords) {
+                    const allWordsFound = keywordObj.words.every(word => row.shemSemel.includes(word));
+                    if (allWordsFound) {
+                        shouldInclude = true;
+                        reason = keywordObj.reason;
+                        break;
+                    }
+                }
+            }
+            
+            if (shouldInclude && row.schum !== 0) {
+                netoHatchaliBedikat += row.schum;
+                gilumSourceDetails.push({
+                    semel: semelNum,
+                    name: row.shemSemel,
+                    schum: row.schum,
+                    reason: reason
+                });
+            }
+        });
+    }
+    
+    // חישוב גילום מס ביניים
+    const gilumMasBeinayim = achuzMasShuli > 0 ? (schumHatchali * achuzMasShuli) / (1 - achuzMasShuli) : 0;
+    
+    // נטו לגילום ב"ל
+    const netoLegilumBL = schumHatchali + gilumMasBeinayim;
+    
+    const totalGilum = totalGilumMas + totalGilumBL;
+    
+    // חישוב ברוטו מלא
+    const brutoMale = schumHatchali / (1 - achuzMasShuli - achuzBLTotalDecimal);
+    
+    // חישוב גילום מס מהנוסחה
+    const gilumMasCalculated = netoLegilumSofi > 0 && achuzMasShuli > 0 ? 
+        (netoLegilumSofi * achuzMasShuli) / (1 - achuzMasShuli) : 0;
+    
+    // חישוב גילום ב"ל מהנוסחה
+    const gilumBLCalculated = netoLegilumBL > 0 && achuzBLTotalDecimal > 0 && achuzMasShuli > 0 ?
+        (netoLegilumBL * achuzBLTotalDecimal * (1 - achuzMasShuli)) / (1 - achuzMasShuli - achuzBLTotalDecimal) : 0;
+    
+    // בניית הסבר פשוט
+    let explanation = '';
+    explanation += `כאשר המעסיק משלם לעובד תשלום בנטו, הוא מגלם עבורו את ניכויי המס והביטוח הלאומי.\n`;
+    explanation += `המעסיק "מנפח" את התשלום כך שאחרי הניכויים יישאר לעובד הסכום המובטח.\n\n`;
+    explanation += `<div class="alert-warning" style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 12px; border-radius: 6px; font-weight: bold; margin-top: 10px;">
+⚠️ חשוב מאוד: חישוב גילום הוא חישוב שנתי.<br>
+כדי לקבל תוצאה מדויקת, חובה להעלות נתונים כספיים בגין שנת מס מלאה.
+</div>\n\n`;
+    
+    // נתונים בסיסיים
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    explanation += `📋 נתונים בסיסיים\n`;
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    explanation += `סכום נטו המקורי (מחושב): <span class="highlight">${schumHatchali.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n`;
+    explanation += `סכום נטו מסמלים בפועל: <span class="highlight">${netoHatchaliBedikat.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n`;
+    
+    const diffNeto = Math.abs(schumHatchali - netoHatchaliBedikat);
+    if (diffNeto < 1) {
+        explanation += `<span class="total">✅ הסכומים תואמים!</span>\n\n`;
+    } else {
+        explanation += `<span class="note">⚠️ הפרש של ${diffNeto.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+    }
+    
+    explanation += `אחוז מס שולי: <span class="highlight">${(achuzMasShuli * 100).toFixed(0)}%</span>\n`;
+    explanation += `אחוז ביטוח לאומי + בריאות: <span class="highlight">${(achuzBLTotalDecimal * 100).toFixed(2)}%</span>\n\n`;
+    
+    // פירוט סמלים מגולמים - מקובץ לפי סמל
+    if (gilumSourceDetails.length > 0) {
+        explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        explanation += `📝 פירוט סמלים לגילום\n`;
+        explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        
+        // קיבוץ לפי סמל
+        const groupedBySemel = {};
+        gilumSourceDetails.forEach(item => {
+            if (!groupedBySemel[item.semel]) {
+                groupedBySemel[item.semel] = {
+                    semel: item.semel,
+                    name: item.name,
+                    total: 0,
+                    reason: item.reason
+                };
+            }
+            groupedBySemel[item.semel].total += item.schum;
+        });
+        
+        // הצגה
+        for (const semel in groupedBySemel) {
+            const item = groupedBySemel[semel];
+            explanation += `• ${item.semel} - ${item.name}: <span class="highlight">${item.total.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n`;
+            explanation += `  <span class="note">(${item.reason})</span>\n`;
+        }
+        explanation += `\n`;
+    }
+    
+    // נוסחה מפושטת
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    explanation += `💡 נוסחת החישוב\n`;
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    
+    explanation += `<strong>סה"כ תוספת לגילום (מס + ב"ל):</strong>\n`;
+    explanation += `סכום נטו × (מס שולי (${(achuzMasShuli * 100).toFixed(0)}%) + אחוז ב"ל (${(achuzBLTotalDecimal * 100).toFixed(2)}%))\n`;
+    explanation += `─────────────────────────────────────────────────────────\n`;
+    explanation += `1 - מס שולי (${(achuzMasShuli * 100).toFixed(0)}%) - אחוז ב"ל (${(achuzBLTotalDecimal * 100).toFixed(2)}%)\n\n`;
+    
+    explanation += `<strong>ערך הברוטו המלא (סכום מקורי + כל הגילומים):</strong>\n`;
+    explanation += `סכום נטו (${schumHatchali.toLocaleString('he-IL', {minimumFractionDigits: 2})}) / (1 - ${(achuzMasShuli * 100).toFixed(0)}% - ${(achuzBLTotalDecimal * 100).toFixed(2)}%)\n`;
+    explanation += `= <span class="highlight">${brutoMale.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+    
+    // סיכום
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    explanation += `📊 סיכום שנתי\n`;
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    
+    explanation += `סכום נטו המקורי: <span class="highlight">${schumHatchali.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+    
+    // גילום ביטוח לאומי - מחושב מול בפועל
+    explanation += `<strong>גילום ביטוח לאומי:</strong>\n`;
+    explanation += `• מחושב: ${gilumBLCalculated.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪\n`;
+    explanation += `• בפועל (סמלים 8100-8199): ${totalGilumBL.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪\n`;
+    const diffBL = Math.abs(gilumBLCalculated - totalGilumBL);
+    if (diffBL < 1) {
+        explanation += `<span class="total">✅ תואם!</span>\n\n`;
+    } else {
+        explanation += `<span class="note">⚠️ הפרש של ${diffBL.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+    }
+    
+    // גילום מס - מחושב מול בפועל
+    explanation += `<strong>גילום מס:</strong>\n`;
+    explanation += `• מחושב: ${gilumMasCalculated.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪\n`;
+    explanation += `• בפועל (סמלים 8000-8099): ${totalGilumMas.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪\n`;
+    const diffMas = Math.abs(gilumMasCalculated - totalGilumMas);
+    if (diffMas < 1) {
+        explanation += `<span class="total">✅ תואם!</span>\n\n`;
+    } else {
+        explanation += `<span class="note">⚠️ הפרש של ${diffMas.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+    }
+    
+    explanation += `<span class="total">סה"כ גילומים: ${totalGilum.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n`;
+    explanation += `<span class="total">ברוטו מלא: ${brutoMale.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+
+    // כפתור הרחבה
+    explanation += `<button onclick="toggleGilumDetails()" class="expand-btn" id="gilumExpandBtn">📖 הרחב הסבר מפורט</button>\n\n`;
+
+    // הסבר מפורט (מוסתר בהתחלה)
+    explanation += `<div id="gilumDetails" style="display:none;">\n`;
+    
+    // שלב 1
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    explanation += `📌 שלב 1: איסוף הסכומים לגילום (הסכום ההתחלתי)\n`;
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    explanation += `המערכת אוספת את כל הסכומים מהרכיבים שדורשים גילום:\n`;
+    explanation += `הסמלים מוגדרים עם תכונה 103 (3):\n`;
+    explanation += `• ביטוח חובה ומקיף, רישיון רכב, החזר אגודות מקצועיות, סמלי אחזקת רכב (משתנות + קבועות נטו)\n`;
+    explanation += `• זקיפות מגולמות (טווח 5100-5199)\n`;
+    explanation += `• רכיבים ששמם מכיל "מגולם"\n\n`;
+    explanation += `סכום התחלתי (X): <span class="highlight">${schumHatchali.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+    
+    // שלב 2
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    explanation += `📌 שלב 2: חישוב ביניים של גילום מס\n`;
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    explanation += `<strong>נוסחה:</strong>\n`;
+    explanation += `גילום מס ביניים = סכום התחלתי × מס שולי (${(achuzMasShuli * 100).toFixed(0)}%)\n`;
+    explanation += `                   ─────────────────────────────────────\n`;
+    explanation += `                   1 - מס שולי (${(achuzMasShuli * 100).toFixed(0)}%)\n\n`;
+    explanation += `גילום מס ביניים: <span class="highlight">${gilumMasBeinayim.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+    
+    // שלב 3
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    explanation += `📌 שלב 3: חישוב גילום ביטוח לאומי\n`;
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    explanation += `נטו לגילום ב"ל = סכום התחלתי + גילום מס ביניים\n`;
+    explanation += `נטו לגילום ב"ל = ${schumHatchali.toLocaleString('he-IL', {minimumFractionDigits: 2})} + ${gilumMasBeinayim.toLocaleString('he-IL', {minimumFractionDigits: 2})}\n`;
+    explanation += `נטו לגילום ב"ל: <span class="highlight">${netoLegilumBL.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+    
+    explanation += `<strong>נוסחה:</strong>\n`;
+    explanation += `גילום ב"ל = נטו לגילום ב"ל × אחוז ב"ל (${(achuzBLTotalDecimal * 100).toFixed(2)}%) × (1 - מס שולי (${(achuzMasShuli * 100).toFixed(0)}%))\n`;
+    explanation += `             ───────────────────────────────────────────────────────────────────────\n`;
+    explanation += `             1 - מס שולי (${(achuzMasShuli * 100).toFixed(0)}%) - אחוז ב"ל (${(achuzBLTotalDecimal * 100).toFixed(2)}%)\n\n`;
+    explanation += `גילום ביטוח לאומי: <span class="highlight">${totalGilumBL.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+    
+    // שלב 4
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    explanation += `📌 שלב 4: חישוב סופי של גילום המס\n`;
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    explanation += `נטו לגילום סופי = סכום התחלתי + גילום ב"ל\n`;
+    explanation += `נטו לגילום סופי = ${schumHatchali.toLocaleString('he-IL', {minimumFractionDigits: 2})} + ${totalGilumBL.toLocaleString('he-IL', {minimumFractionDigits: 2})}\n`;
+    explanation += `נטו לגילום סופי (סמל 91400): <span class="highlight">${netoLegilumSofi.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+    
+    explanation += `<strong>נוסחה:</strong>\n`;
+    explanation += `גילום מס = נטו לגילום סופי × מס שולי (${(achuzMasShuli * 100).toFixed(0)}%)\n`;
+    explanation += `           ─────────────────────────────────────────────\n`;
+    explanation += `           1 - מס שולי (${(achuzMasShuli * 100).toFixed(0)}%)\n\n`;
+    explanation += `גילום מס סופי: <span class="highlight">${totalGilumMas.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n\n`;
+    
+    // נוסחה מפושטת
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    explanation += `💡 נוסחה מפושטת (חישוב ישיר)\n`;
+    explanation += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    explanation += `ניתן לחשב את סה"כ הגילום (מס + ב"ל) בפעולה אחת:\n\n`;
+    explanation += `סה"כ גילום = סכום נטו × (מס שולי + אחוז ב"ל)\n`;
+    explanation += `             ─────────────────────────────────────\n`;
+    explanation += `             1 - מס שולי - אחוז ב"ל\n\n`;
+    
+    explanation += `</div>\n`;
+    
+    return {
+        title: '📊 בדיקת גילומים',
+        explanation: explanation
+    };
+}
+
+// פונקציה להרחבה/צמצום הסבר גילומים
+function toggleGilumDetails() {
+    const details = document.getElementById('gilumDetails');
+    const btn = document.getElementById('gilumExpandBtn');
+    
+    if (details.style.display === 'none') {
+        details.style.display = 'block';
+        btn.textContent = '📖 צמצם הסבר';
+    } else {
+        details.style.display = 'none';
+        btn.textContent = '📖 הרחב הסבר מפורט';
+    }
+}
+function checkSimpleRule(ruleName) {
+    const rule = SIMPLE_RULES[ruleName];
+    if (!rule) return null;
+
+    // חיפוש לפי שם סמל (עמודה F)
+    let matchedRows = null;
+    for (const rows of Object.values(employeeData.elements)) {
+const found = rows.filter(r => r.shemSemel.includes(ruleName) || ruleName.includes(r.shemSemel));
+        if (found.length > 0) {
+            matchedRows = found;
+            break;
+        }
+    }
+
+    if (!matchedRows || matchedRows.length === 0) {
+        showMessage(`לא נמצא רכיב "${ruleName}" עבור עובד זה.`, 'warning');
+        return null;
+    }
+
+    const row = matchedRows[0];
+    let explanation = `${rule.explanation}\n\n`;
+
+    for (const [field, label] of Object.entries(rule.fields)) {
+        const value = row[field] || 0;
+        explanation += `<span class="highlight">${label}</span>: ${value.toLocaleString('he-IL', {minimumFractionDigits: 2})}\n`;
+    }
+
+    if (rule.relatedSemel && rule.checkPercent) {
+    const relatedRows = employeeData.elements[rule.relatedSemel];
+    if (relatedRows && relatedRows.length > 0) {
+        const base = relatedRows[0].schum;
+        const expected = base * rule.checkPercent;
+        explanation += `\nשכר קובע (${rule.relatedSemel}): ${base.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+        explanation += `צפוי (${rule.checkPercent * 100}%): ${expected.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+        
+        const diff = Math.abs(row.schum - expected);
+        if (diff < 1) {
+            explanation += `\n✅ הסכום תואם את החישוב.`;
+        } else {
+            explanation += `\n⚠️ פער של ${diff.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח מהחישוב הצפוי.`;
+        }
+    }
+}
+
+    return {
+        title: `📊 הסבר ${rule.name} (סמל ${row.semel})`,
+        explanation: explanation
+    };
+}
+function populateCheckTypes() {
+    const select = document.getElementById('checkType');
+    for (const [semel, rule] of Object.entries(SIMPLE_RULES)) {
+        const option = document.createElement('option');
+        option.value = semel;
+        option.textContent = `${rule.name} (${semel})`;
+        select.appendChild(option);
+    }
+}
+populateCheckTypes();
+function check161() {
+    const rows91200 = employeeData.elements[91200];
+    const rows91301 = employeeData.elements[91301];
+    const rows91025 = employeeData.elements[91025];
+    const rows92199 = employeeData.elements[92199];
+    const rows90120 = employeeData.elements[90120];
+    const rows90148 = employeeData.elements[90148];
+    const rows4630 = employeeData.elements[4630];
+    const rows4631 = employeeData.elements[4631];
+
+    // בדיקת פנסיה תקציבית
+    let pensiaT = false;
+    if (rows90120) {
+        rows90120.forEach(row => {
+            if (row.kamut === 200 && row.value6 === 1) {
+                pensiaT = true;
+            }
+        });
+    }
+
+    // בדיקת משרד
+    const misrad = Number(employeeData.misrad) || 0;
+    const isMisrad418to422 = misrad >= 418 && misrad <= 422;
+
+    // היקף משרה מסמל 90148
+    let heikefMisra = 1;
+    let needsInflation = false;
+    if (rows90148 && rows90148.length > 0) {
+        heikefMisra = rows90148[0].schum;
+        if (heikefMisra !== 1 && heikefMisra > 0) {
+            needsInflation = true;
+        }
+    }
+
+    let explanation = '';
+
+   // =============================
+    // חלק א' - משכורת מבוטחת
+    // =============================
+    explanation += `<span class="total">══ חלק א\': משכורת מבוטחת ══</span>\n\n`;
+    explanation += `ממוצע של 12 החודשים המלאים האחרונים של סה"כ השכר המבוטח לקופות.\n`;
+    explanation += `כולל רק סמלים שהיוו בפועל בסיס להפרשה לקופות גמל.\n\n`;
+
+    if (pensiaT) {
+        explanation += `<span class="note">📌 העובד בפנסיה תקציבית (סמל 90120 קוד 200). ברוטו פנסיה תקציבית לא נכלל בחישוב הממוצע.</span>\n\n`;
+    }
+
+    // ערך משכורת מבוטחת
+    let mevutachat = null;
+    let mekorMevutachat = '';
+
+    if (rows91200) {
+        rows91200.forEach(row => {
+            if (row.value13) {
+                mevutachat = row.value13;
+                mekorMevutachat = 'סמל 91200 שדה 13';
+            }
+        });
+    }
+    if (mevutachat === null && rows91301) {
+        rows91301.forEach(row => {
+            if (row.achuz) {
+                mevutachat = row.achuz;
+                mekorMevutachat = 'סמל 91301 שדה אחוז';
+            }
+        });
+    }
+
+    if (mevutachat !== null) {
+        explanation += `<span class="highlight">משכורת מבוטחת: ${mevutachat.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח</span>\n`;
+        explanation += `מקור: ${mekorMevutachat}\n\n`;
+    } else {
+        explanation += `<span class="note">⚠️ לא נמצא ערך משכורת מבוטחת.</span>\n\n`;
+    }
+
+    // פירוט חודשי 92199
+    let monthlyDetails = [];
+    if (rows92199) {
+        rows92199.forEach(row => {
+            const monthFrom = row.taarichM ? formatMonthYear(row.taarichM) : '';
+            const monthTo = row.taarichAd ? formatMonthYear(row.taarichAd) : '';
+            monthlyDetails.push({
+                month: monthFrom || monthTo,
+                schum: row.schum
+            });
+        });
+        monthlyDetails.sort((a, b) => a.month > b.month ? 1 : -1);
+    }
+
+    if (monthlyDetails.length > 0) {
+        explanation += `פירוט חודשי (סמל 92199):\n`;
+        let totalMonthly = 0;
+        let countMonths = 0;
+        monthlyDetails.forEach(m => {
+            explanation += `<span class="highlight">${m.month}</span>: ${m.schum.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+            if (m.schum > 0) {
+                totalMonthly += m.schum;
+                countMonths++;
+            }
+        });
+        const calculatedAvg = countMonths > 0 ? totalMonthly / countMonths : 0;
+        explanation += `\nסה"כ ${countMonths} חודשים: ${totalMonthly.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+        explanation += `ממוצע מחושב: ${calculatedAvg.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+
+        if (mevutachat !== null) {
+            const diff = Math.abs(mevutachat - calculatedAvg);
+            if (diff < 1) {
+                explanation += `✅ הממוצע תואם את המשכורת המבוטחת.\n`;
+            } else {
+                explanation += `⚠️ פער של ${diff.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח בין הממוצע למשכורת המבוטחת.\n`;
+            }
+        }
+    } else {
+        explanation += `<span class="note">⚠️ לא נמצא פירוט חודשי (סמל 92199).</span>\n`;
+    }
+
+    // זיהוי חודש שכר נוכחי
+    const allSalaryDates = rawData.map(r => Number(r[COL.TAARICH_SACHAR])).filter(d => d > 0);
+    const currentSalaryDate = Math.max(...allSalaryDates);
+    const currentMonthStr = formatMonthYear(currentSalaryDate);
+
+    // הסבר מפורט לחודש נוכחי - ממה מורכב 92199
+    const rows4720 = employeeData.elements[4720];
+    const rows4717 = employeeData.elements[4717];
+
+    explanation += `\nפירוט חישוב חודש נוכחי (${currentMonthStr}):\n`;
+    explanation += `סמל 92199 מורכב מהרכיבים הבאים:\n\n`;
+
+    let totalBreakdown = 0;
+
+    // 91025 - ברוטו פנסיה (רק אם לא פנסיה תקציבית)
+    if (!pensiaT) {
+        let val91025 = 0;
+        if (rows91025) {
+            const matched = rows91025.find(row => row.taarichSachar === row.taarichErech);
+            if (matched) val91025 = matched.schum;
+        }
+        explanation += `<span class="highlight">ברוטו פנסיה (91025)</span>: ${val91025.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+        totalBreakdown += val91025;
+    } else {
+        explanation += `<span class="note">📌 ברוטו פנסיה (91025) לא נכלל - פנסיה תקציבית.</span>\n`;
+    }
+
+    // 4720
+    let val4720 = 0;
+    if (rows4720) {
+        const matched = rows4720.find(row => row.taarichSachar === row.taarichErech);
+        if (matched) val4720 = matched.schum;
+    }
+    explanation += `<span class="highlight">${rows4720 && rows4720[0] ? rows4720[0].shemSemel : 'סמל 4720'}</span>: ${val4720.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+    totalBreakdown += val4720;
+
+    // 4717
+    let val4717 = 0;
+    if (rows4717) {
+        const matched = rows4717.find(row => row.taarichSachar === row.taarichErech);
+        if (matched) val4717 = matched.schum;
+    }
+    explanation += `<span class="highlight">${rows4717 && rows4717[0] ? rows4717[0].shemSemel : 'סמל 4717'}</span>: ${val4717.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+    totalBreakdown += val4717;
+
+    explanation += `\nסה"כ רכיבים: ${totalBreakdown.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+
+    // השוואה לחודש הנוכחי ב-92199
+    if (monthlyDetails.length > 0) {
+        const lastMonth = monthlyDetails.find(m => m.month === currentMonthStr) || monthlyDetails[monthlyDetails.length - 1];
+        explanation += `ערך חודש נוכחי ב-92199 (${lastMonth.month}): ${lastMonth.schum.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+        const diffBreakdown = Math.abs(lastMonth.schum - totalBreakdown);
+        if (diffBreakdown < 1) {
+            explanation += `✅ סכום הרכיבים תואם.\n`;
+        } else {
+            explanation += `⚠️ פער של ${diffBreakdown.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח בין סכום הרכיבים לערך ב-92199.\n`;
+        }
+    }
+
+    // =============================
+    // חלק ב' - משכורת לפיצויים
+    // =============================
+    explanation += `\n\n<span class="total">══ חלק ב\': משכורת לפיצויים ══</span>\n\n`;
+    explanation += `ברוטו פנסיה (סמל 91025) של חודש הערך הנבדק (תאריך שכר = תאריך ערך)`;
+    explanation += `בפועל החוקה צוברת סמלים עם תכונה 201 (כן), לכן אם סמל פנסיוני אבל רוצים לנטרל אותו יש להוסיף תכונה 136 לסמל עם קוד 1`;
+    explanation += `  אם מסיבה כלשהי הסמל פנסיוני ללא תכונה פנסיונית ניתן להוסיף אותו למשכורת לפיצויים על ידי הוספת תכונה 136 עם קוד 2 לתכונות של הסמל`;
+   
+    if (!isMisrad418to422) {
+        explanation += `, בתוספת 1/12 הבראה (4630)`;
+        if (!pensiaT) {
+            explanation += ` ו-1/12 ביגוד (4631)`;
+        }
+    }
+    if (needsInflation) {
+        explanation += `, מנופח ל-100% (היקף משרה: ${heikefMisra})`;
+    }
+    explanation += `.\n\n`;
+
+    // ברוטו פנסיה - רק שורה שתאריך שכר = תאריך ערך
+    let brutoPensia = 0;
+    let currentErech = null;
+    if (rows91025) {
+        const matched = rows91025.find(row => row.taarichSachar === row.taarichErech);
+        if (matched) {
+            brutoPensia = matched.schum;
+            currentErech = matched.taarichErech;
+            explanation += `<span class="highlight">ברוטו פנסיה (91025)</span>: ${brutoPensia.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח (חודש ערך: ${formatMonthYear(matched.taarichErech)})\n`;
+        } else {
+            explanation += `<span class="note">⚠️ לא נמצא ברוטו פנסיה (91025) עם תאריך שכר = תאריך ערך.</span>\n`;
+        }
+    }
+
+    // 4630 - 1/12 הבראה - מוסיפים תמיד חוץ ממשרדות 418-422
+    let havra12 = 0;
+    let bigud12 = 0;
+
+    if (!isMisrad418to422) {
+        if (rows4630 && rows4630.length > 0) {
+            havra12 = rows4630[0].schum;
+            explanation += `<span class="highlight">1/12 הבראה (4630)</span>: ${havra12.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+        }
+    } else {
+        explanation += `<span class="note">📌 לא מוסיפים 4630 (משרד ${misrad}).</span>\n`;
+    }
+
+    // 4631 - 1/12 ביגוד - לא מוסיפים בפנסיה תקציבית או משרדות 418-422
+    if (!pensiaT && !isMisrad418to422) {
+        if (rows4631 && rows4631.length > 0) {
+            bigud12 = rows4631[0].schum;
+            explanation += `<span class="highlight">1/12 ביגוד (4631)</span>: ${bigud12.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+        }
+    } else {
+        let reason = pensiaT ? 'פנסיה תקציבית' : `משרד ${misrad}`;
+        explanation += `<span class="note">📌 לא מוסיפים 4631 (${reason}).</span>\n`;
+    }
+
+    let totalPitzuim = brutoPensia + havra12 + bigud12;
+
+    if (needsInflation) {
+        explanation += `\nלפני ניפוח: ${totalPitzuim.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+        totalPitzuim = totalPitzuim / heikefMisra;
+        explanation += `היקף משרה (90148): ${heikefMisra}\n`;
+        explanation += `אחרי ניפוח ל-100%: ${totalPitzuim.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+    }
+
+    // השוואה לערך במערכת
+    let pitzuimMaarechet = null;
+    if (rows91200) {
+        rows91200.forEach(row => {
+            if (row.taarif) pitzuimMaarechet = row.taarif;
+        });
+    }
+    if (pitzuimMaarechet === null && rows91301) {
+        rows91301.forEach(row => {
+            if (row.schum) pitzuimMaarechet = row.schum;
+        });
+    }
+
+    explanation += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    explanation += `משכורת לפיצויים מחושבת: ${totalPitzuim.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+
+    if (pitzuimMaarechet !== null) {
+        explanation += `משכורת לפיצויים במערכת: ${pitzuimMaarechet.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+        const diff = Math.abs(pitzuimMaarechet - totalPitzuim);
+        if (diff < 1) {
+            explanation += `✅ הסכום המחושב תואם את המערכת.\n`;
+        } else {
+            explanation += `⚠️ פער של ${diff.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח.\n`;
+        }
+    }
+
+    // ========== פירוט סמלים לפיצויים ==========
+    // נתונים מתוך ecology.json - תכונה 136
+    const neutralizedList = [1320, 1329, 1340, 1342, 1360, 1369, 1413, 1416, 4960];
+    const addedList = [4110, 4111, 4112, 4113, 4114, 4115, 4116, 4117, 4118, 4119, 4120, 4121, 4122, 4123, 4124, 4125, 4126, 4127, 4128, 4129, 4130, 4131, 4132, 4133, 4134, 4135, 4136, 4137, 4138, 4139, 4140, 4141, 4142, 4143, 4144, 4145, 4146, 4147];
+    
+    // איסוף סמלים ששולמו בחודש הנבדק
+    let neutralizedPaid = [];
+    let addedPaid = [];
+    
+    if (currentErech) {
+        for (const semel in employeeData.elements) {
+            const semelNum = Number(semel);
+            const rows = employeeData.elements[semel];
+            
+            // מצא שורה שתאריך שכר = תאריך ערך הנבדק
+            const matchedRow = rows.find(r => r.taarichSachar === currentErech && r.taarichErech === currentErech);
+            if (matchedRow && matchedRow.schum !== 0) {
+                const semelName = matchedRow.shemSemel || `סמל ${semelNum}`;
+                
+                if (neutralizedList.includes(semelNum)) {
+                    neutralizedPaid.push({
+                        semel: semelNum,
+                        name: semelName,
+                        schum: matchedRow.schum
+                    });
+                }
+                if (addedList.includes(semelNum)) {
+                    addedPaid.push({
+                        semel: semelNum,
+                        name: semelName,
+                        schum: matchedRow.schum
+                    });
+                }
+            }
+        }
+    }
+    
+    // מיון לפי סמל
+    neutralizedPaid.sort((a, b) => a.semel - b.semel);
+    addedPaid.sort((a, b) => a.semel - b.semel);
+    
+    // כפתור פירוט
+    explanation += `\n<button onclick="toggle161Details()" class="expand-btn" id="btn161Details">📋 פירוט סמלים עם תכונה 136</button>\n`;
+    
+    explanation += `<div id="details161" style="display:none; margin-top:10px;">\n`;
+    
+    // סמלים מנוטרלים
+    explanation += `\n<strong>🔴 סמלים מנוטרלים (תכונה 136=1):</strong>\n`;
+    explanation += `<span class="note">סמלים שנכללים בברוטו פנסיה אך לא נספרים למשכורת לפיצויים</span>\n\n`;
+    if (neutralizedPaid.length > 0) {
+        let totalNeutralized = 0;
+        neutralizedPaid.forEach(item => {
+            explanation += `• ${item.semel} - ${item.name}: <span class="highlight">${item.schum.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n`;
+            totalNeutralized += item.schum;
+        });
+        explanation += `<span class="total">סה"כ מנוטרל: ${totalNeutralized.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n`;
+    } else {
+        explanation += `<span class="note">לא נמצאו סמלים מנוטרלים בחודש זה.</span>\n`;
+    }
+    
+    // סמלים שנוספו
+    explanation += `\n<strong>🟢 סמלים שנוספו (תכונה 136=2):</strong>\n`;
+    explanation += `<span class="note">סמלים שמתווספים למשכורת לפיצויים מעבר לברוטו פנסיה</span>\n\n`;
+    if (addedPaid.length > 0) {
+        let totalAdded = 0;
+        addedPaid.forEach(item => {
+            explanation += `• ${item.semel} - ${item.name}: <span class="highlight">${item.schum.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n`;
+            totalAdded += item.schum;
+        });
+        explanation += `<span class="total">סה"כ נוסף: ${totalAdded.toLocaleString('he-IL', {minimumFractionDigits: 2})} ₪</span>\n`;
+    } else {
+        explanation += `<span class="note">לא נמצאו סמלים שנוספו בחודש זה.</span>\n`;
+    }
+    
+    explanation += `</div>\n`;
+   
+    // =============================
+    // חלק ג' - משכורת לפטור (תקנה 1)
+    // =============================
+    explanation += `\n\n<span class="total">══ חלק ג\': משכורת אחרונה לפטור (תקנה 1) ══</span>\n\n`;
+    explanation += `ממוצע של 12 החודשים המלאים האחרונים של סה"כ תוספות ללא החזר הוצאות ושווי רכב.\n\n`;
+
+    const rows92300 = employeeData.elements[92300];
+
+    // ערך משכורת לפטור
+    let patur = null;
+    let mekorPatur = '';
+
+    if (rows91200) {
+        rows91200.forEach(row => {
+            if (row.value12) {
+                patur = row.value12;
+                mekorPatur = 'סמל 91200 שדה 12';
+            }
+        });
+    }
+    if (patur === null && rows91301) {
+        rows91301.forEach(row => {
+            if (row.kamut) {
+                patur = row.kamut;
+                mekorPatur = 'סמל 91301 שדה כמות';
+            }
+        });
+    }
+
+    if (patur !== null) {
+        explanation += `<span class="highlight">משכורת לפטור: ${patur.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח</span>\n`;
+        explanation += `מקור: ${mekorPatur}\n\n`;
+    } else {
+        explanation += `<span class="note">⚠️ לא נמצא ערך משכורת לפטור.</span>\n\n`;
+    }
+
+    // פירוט חודשי 92300
+    let monthlyPatur = [];
+    if (rows92300) {
+        rows92300.forEach(row => {
+            const monthFrom = row.taarichM ? formatMonthYear(row.taarichM) : '';
+            const monthTo = row.taarichAd ? formatMonthYear(row.taarichAd) : '';
+            monthlyPatur.push({
+                month: monthFrom || monthTo,
+                schum: row.schum
+            });
+        });
+        monthlyPatur.sort((a, b) => a.month > b.month ? 1 : -1);
+    }
+
+    if (monthlyPatur.length > 0) {
+        explanation += `פירוט חודשי (סמל 92300):\n`;
+        let totalPatur = 0;
+        let countPatur = 0;
+        monthlyPatur.forEach(m => {
+            explanation += `<span class="highlight">${m.month}</span>: ${m.schum.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+            if (m.schum > 0) {
+                totalPatur += m.schum;
+                countPatur++;
+            }
+        });
+        const calculatedPatur = countPatur > 0 ? totalPatur / countPatur : 0;
+        explanation += `\nסה"כ ${countPatur} חודשים: ${totalPatur.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+        explanation += `ממוצע מחושב: ${calculatedPatur.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח\n`;
+
+        if (patur !== null) {
+            const diff = Math.abs(patur - calculatedPatur);
+            if (diff < 1) {
+                explanation += `✅ הממוצע תואם את משכורת הפטור.\n`;
+            } else {
+                explanation += `⚠️ פער של ${diff.toLocaleString('he-IL', {minimumFractionDigits: 2})} ש"ח בין הממוצע למשכורת הפטור.\n`;
+            }
+        }
+    } else {
+        explanation += `<span class="note">⚠️ לא נמצא פירוט חודשי (סמל 92300).</span>\n`;
+    }
+
+    return {
+        title: '📊 בדיקת סכומים בטופס 161',
+        explanation: explanation
+    };
+}
+const CATEGORIES = ['תשלומים', 'ניכויים', 'הפרשות', 'זקיפות', 'נתוני עזר'];
+
+function switchTab(tab) {
+    document.getElementById('tlushPanel').style.display = tab === 'tlush' ? 'block' : 'none';
+    document.getElementById('checksPanel').style.display = tab === 'checks' ? 'block' : 'none';
+    document.getElementById('tabTlush').style.background = tab === 'tlush' ? '#3498db' : '#e9ecef';
+    document.getElementById('tabTlush').style.color = tab === 'tlush' ? 'white' : '#333';
+    document.getElementById('tabChecks').style.background = tab === 'checks' ? '#3498db' : '#e9ecef';
+    document.getElementById('tabChecks').style.color = tab === 'checks' ? 'white' : '#333';
+}
+function toggle161Details() {
+    const details = document.getElementById('details161');
+    const btn = document.getElementById('btn161Details');
+    if (details.style.display === 'none') {
+        details.style.display = 'block';
+        btn.textContent = '📋 סגור פירוט סמלים';
+    } else {
+        details.style.display = 'none';
+        btn.textContent = '📋 פירוט סמלים לפיצויים';
+    }
+}
+function buildTlush() {
+    const container = document.getElementById('tlushCategories');
+    container.innerHTML = '';
+// בדיקה שיש רק תאריך שכר אחד
+    const uniqueSalaryDates = [...new Set(
+        rawData
+            .map(row => row[COL.TAARICH_SACHAR])
+            .filter(d => d !== undefined && d !== null && d !== '' && d !== 'תאריך שכר')
+    )];
+    
+    if (uniqueSalaryDates.length > 1) {
+        document.getElementById('tlushEmployeeInfo').innerHTML = '';
+        container.innerHTML = `<div class="message warning">⚠️ לצורך תצוגת תלוש יש לטעון נתונים לחודש שכר אחד בלבד.<br>נמצאו ${uniqueSalaryDates.length} תאריכי שכר שונים.</div>`;
+        document.getElementById('tlushPanel').style.display = 'block';
+        return;
+    }
+    
+    if (uniqueSalaryDates.length === 0) {
+        document.getElementById('tlushEmployeeInfo').innerHTML = '';
+        container.innerHTML = `<div class="message warning">⚠️ לא נמצאו נתוני שכר.</div>`;
+        document.getElementById('tlushPanel').style.display = 'block';
+        return;
+    }
+    // פרטי עובד
+    document.getElementById('tlushEmployeeInfo').innerHTML =
+        `<span>👤 זהות: <strong>${employeeData.zehut}</strong></span>` +
+        `<span>מספר עובד: <strong>${employeeData.misparOved}</strong></span>` +
+        `<span>משרד: <strong>${employeeData.misrad}</strong></span>`;
+
+    // חלוקה לקטגוריות לפי שורות כותרת חוזרות
+    const allRows = XLSX.utils.sheet_to_json(
+        XLSX.read(lastFileData, { type: 'array' }).Sheets[
+            XLSX.read(lastFileData, { type: 'array' }).SheetNames[0]
+        ], { header: 1 }
+    );
+
+    let categories = [];
+    let currentCat = { name: CATEGORIES[0], rows: [] };
+    let catIndex = 0;
+    let headersFound = 0;
+
+    // מציאת שורת כותרות ראשונה
+    let headerRowIndex = -1;
+    for (let i = 0; i < Math.min(allRows.length, 5); i++) {
+        if (allRows[i] && allRows[i].some(cell => String(cell || '').trim() === 'סמל')) {
+            headerRowIndex = i;
+            break;
+        }
+    }
+
+    const headers = allRows[headerRowIndex];
+
+    for (let i = headerRowIndex + 1; i < allRows.length; i++) {
+        const row = allRows[i];
+        if (!row || row.length === 0) continue;
+
+        // בדיקה אם זו שורת כותרות חוזרת
+        if (row.some(cell => String(cell || '').trim() === 'סמל')) {
+            // שמירת קטגוריה קודמת
+            if (currentCat.rows.length > 0) {
+                categories.push(currentCat);
+            }
+            catIndex++;
+            currentCat = { name: CATEGORIES[catIndex] || `קטגוריה ${catIndex + 1}`, rows: [] };
+            continue;
+        }
+
+        // שורת נתונים רגילה
+        const obj = {};
+        headers.forEach((header, idx) => {
+            if (header) obj[String(header).trim()] = row[idx];
+        });
+
+        if (obj[COL.SEMEL]) {
+            currentCat.rows.push(obj);
+        }
+    }
+    // שמירת קטגוריה אחרונה
+    if (currentCat.rows.length > 0) {
+        categories.push(currentCat);
+    }
+
+    // סינון נתוני עזר - רק סמלים ספציפיים
+    const allowedEzer = [91025, 4717, 4720, 90146];
+
+    // בניית HTML לכל קטגוריה
+    function buildCatHtml(cat) {
+        const grouped = {};
+        
+        // משתנים לאיחוד גילומים
+        let gilumMasTotal = { shotef: 0, hefarshim: 0, hefarshimCount: 0, hasData: false };
+        let gilumBLTotal = { shotef: 0, hefarshim: 0, hefarshimCount: 0, hasData: false };
+        
+        cat.rows.forEach(row => {
+            const semel = Number(row[COL.SEMEL] || 0);
+            const semelStr = row[COL.SEMEL] || '';
+            const shemSemel = row[COL.SHEM_SEMEL] || '';
+            const originalSchum = Number(row[COL.SCHUM] || 0);
+            const kamut = Number(row[COL.KAMUT] || 0);
+            const tSachar = row[COL.TAARICH_SACHAR];
+            const tErech = row[COL.TAARICH_ERECH];
+            const isShotef = (tSachar === tErech);
+
+            // סינון נתוני עזר
+            if (cat.name === 'נתוני עזר') {
+                if (!allowedEzer.includes(semel)) return;
+                
+                if (semel === 90146 && Math.floor(originalSchum) !== 998) {
+                    return;
+                }
+            }
+
+            const displayValue = (semel === 90146) ? kamut : originalSchum;
+
+            // איחוד גילום מס (8000-8099)
+            if (semel >= 8000 && semel <= 8099) {
+                gilumMasTotal.hasData = true;
+                if (isShotef) {
+                    gilumMasTotal.shotef += displayValue;
+                } else {
+                    gilumMasTotal.hefarshim += displayValue;
+                    gilumMasTotal.hefarshimCount++;
+                }
+                return;
+            }
+            
+            // איחוד גילום ביטוח לאומי (8100-8199)
+            if (semel >= 8100 && semel <= 8199) {
+                gilumBLTotal.hasData = true;
+                if (isShotef) {
+                    gilumBLTotal.shotef += displayValue;
+                } else {
+                    gilumBLTotal.hefarshim += displayValue;
+                    gilumBLTotal.hefarshimCount++;
+                }
+                return;
+            }
+
+            if (!grouped[semelStr]) {
+                grouped[semelStr] = {
+                    semel: semelStr,
+                    shemSemel: shemSemel,
+                    shotef: null,
+                    hefarshim: { schum: 0, count: 0 }
+                };
+            }
+
+            if (isShotef && !grouped[semelStr].shotef) {
+                grouped[semelStr].shotef = { schum: displayValue };
+            } else {
+                grouped[semelStr].hefarshim.schum += displayValue;
+                grouped[semelStr].hefarshim.count++;
+            }
+        });
+
+        // הוספת שורות מאוחדות לגילומים
+        if (gilumMasTotal.hasData) {
+            grouped['8000-8099'] = {
+                semel: '8000-8099',
+                shemSemel: 'גילום מס הכנסה',
+                shotef: { schum: gilumMasTotal.shotef },
+                hefarshim: { schum: gilumMasTotal.hefarshim, count: gilumMasTotal.hefarshimCount },
+                isGilum: true
+            };
+        }
+        
+        if (gilumBLTotal.hasData) {
+            grouped['8100-8199'] = {
+                semel: '8100-8199',
+                shemSemel: 'גילום ביטוח לאומי',
+                shotef: { schum: gilumBLTotal.shotef },
+                hefarshim: { schum: gilumBLTotal.hefarshim, count: gilumBLTotal.hefarshimCount },
+                isGilum: true
+            };
+        }
+
+        let html = `<div class="tlush-category-title">${cat.name}</div>`;
+        html += `<table class="tlush-table">`;
+        html += `<tr><th>סמל</th><th>שם</th><th>שוטף</th><th>הפרשים</th><th></th></tr>`;
+
+        for (const semel in grouped) {
+            const g = grouped[semel];
+            const hasExplanation = g.isGilum ? true : hasExplanationRule(g.shemSemel, semel);
+            const rowClass = hasExplanation ? 'has-explanation' : '';
+            const shotef = g.shotef || { schum: 0 };
+            const hefStr = g.hefarshim.count > 0
+                ? `${g.hefarshim.schum.toLocaleString('he-IL', {minimumFractionDigits: 2})}`
+                : '';
+
+            // עבור גילומים, נשלח 8000 כפרמטר כדי להפעיל את checkGilum
+            const semelForClick = g.isGilum ? 8000 : semel;
+            
+            html += `<tr class="${rowClass}" onclick="showTlushExplanation('${g.shemSemel.replace(/'/g, "\\'")}', ${semelForClick})">`;
+            html += `<td>${g.semel}</td>`;
+            html += `<td>${g.shemSemel}</td>`;
+            html += `<td>${shotef.schum.toLocaleString('he-IL', {minimumFractionDigits: 2})}</td>`;
+            html += `<td>${hefStr}</td>`;
+            html += `<td>${hasExplanation ? '<span class="tlush-explain-icon">💡</span>' : ''}</td>`;
+            html += `</tr>`;
+        }
+
+        html += `</table>`;
+        return html;
+    }
+
+    // תשלומים וניכויים זה ליד זה
+    const tashlumim = categories.find(c => c.name === 'תשלומים');
+    const nikuyim = categories.find(c => c.name === 'ניכויים');
+
+    if (tashlumim || nikuyim) {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'tlush-row';
+        if (tashlumim) {
+            const div = document.createElement('div');
+            div.className = 'tlush-category';
+            div.innerHTML = buildCatHtml(tashlumim);
+            rowDiv.appendChild(div);
+        }
+        if (nikuyim) {
+            const div = document.createElement('div');
+            div.className = 'tlush-category';
+            div.innerHTML = buildCatHtml(nikuyim);
+            rowDiv.appendChild(div);
+        }
+        container.appendChild(rowDiv);
+    }
+
+    // הפרשות וזקיפות זה ליד זה
+    const hafrashot = categories.find(c => c.name === 'הפרשות');
+    const zkifot = categories.find(c => c.name === 'זקיפות');
+
+    if (hafrashot || zkifot) {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'tlush-row';
+        if (hafrashot) {
+            const div = document.createElement('div');
+            div.className = 'tlush-category';
+            div.innerHTML = buildCatHtml(hafrashot);
+            rowDiv.appendChild(div);
+        }
+        if (zkifot) {
+            const div = document.createElement('div');
+            div.className = 'tlush-category';
+            div.innerHTML = buildCatHtml(zkifot);
+            rowDiv.appendChild(div);
+        }
+        container.appendChild(rowDiv);
+    }
+
+    // נתוני עזר - שורה בודדת
+    const ezer = categories.find(c => c.name === 'נתוני עזר');
+    if (ezer) {
+        const div = document.createElement('div');
+        div.className = 'tlush-category';
+        div.innerHTML = buildCatHtml(ezer);
+        container.appendChild(div);
+    }
+
+    document.getElementById('tlushPanel').style.display = 'block';
+}
+function hasExplanationRule(shemSemel, semelNum) {
+    const num = Number(semelNum);
+    
+    // בדיקה אם זה סמל גילום
+    if ((num >= 8000 && num <= 8099) || (num >= 8100 && num <= 8199)) {
+        return true;
+    }
+    
+    if (COMPLEX_RULES_MAP[num]) return true;
+    
+    for (const key in SIMPLE_RULES) {
+        if (shemSemel.includes(key) || key.includes(shemSemel)) {
+            return true;
+        }
+    }
+    return false;
+}
+function showTlushExplanation(shemSemel, semelNum) {
+    const num = Number(semelNum);
+    let result = null;
+
+    // בדיקה אם זה סמל גילום (8000-8099 או 8100-8199)
+    if ((num >= 8000 && num <= 8099) || (num >= 8100 && num <= 8199)) {
+        result = checkGilum();
+    }
+    // קודם נבדוק אם זה סמל של בדיקה מורכבת לפי המספר
+    else if (COMPLEX_RULES_MAP[num]) {
+        const checkType = COMPLEX_RULES_MAP[num];
+        if (checkType === 'vatik') {
+            result = checkVatik();
+        } else if (checkType === 'nihul4517') {
+            result = checkNihul4517();
+        } else if (checkType === 'bruto91025') {
+            result = check91025();
+        } else if (checkType === 'checkTax') {
+            result = checkTax();
+        } else if (checkType === 'checkBituachLeumi') {
+            result = checkBituachLeumi();
+        } else if (checkType === 'checkGilum') {
+            result = checkGilum();
+        }
+    } else {
+        // נחפש בחוקים הפשוטים לפי שם
+        let ruleName = '';
+        for (const key in SIMPLE_RULES) {
+            if (shemSemel.includes(key) || key.includes(shemSemel)) {
+                ruleName = key;
+                break;
+            }
+        }
+
+        if (ruleName) {
+            result = checkSimpleRule(ruleName);
+            if (!result && SIMPLE_RULES[ruleName]) {
+                result = {
+                    title: SIMPLE_RULES[ruleName].name,
+                    explanation: SIMPLE_RULES[ruleName].explanation
+                };
+            }
+        }
+    }
+
+    // הדפסת התוצאה לפאנל
+    if (result) {
+        document.getElementById('tlushExpTitle').textContent = result.title;
+        document.getElementById('tlushExpContent').innerHTML = result.explanation;
+    } else {
+        document.getElementById('tlushExpTitle').textContent = `${shemSemel} (${semelNum})`;
+        document.getElementById('tlushExpContent').innerHTML = 'אין הסבר זמין לרכיב זה.';
+    }
+    
+    document.getElementById('tlushExplanation').style.display = 'block';
+}
+
+function closeTlushExplanation() {
+    document.getElementById('tlushExplanation').style.display = 'none';
+}
+const CHAT_SERVER = 'http://127.0.0.1:5001';
+
+function chatAppend(text, isUser) {
+    const box = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.style.cssText = `background:${isUser?'#DCF8C6':'#fff'}; border:1px solid #e0e0e0; border-radius:12px; padding:10px 13px; font-size:0.9em; align-self:${isUser?'flex-end':'flex-start'}; max-width:90%; white-space:pre-wrap;`;
+    div.textContent = text;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+    return div;
+}
+
+async function chatSend() {
+    const input = document.getElementById('chatInput');
+    const question = input.value.trim();
+    if (!question) return;
+    input.value = '';
+    chatAppend(question, true);
+    const typing = chatAppend('מחשב תשובה...', false);
+    try {
+        const hasEmployee = employeeData && employeeData.zehut;
+        const endpoint = hasEmployee ? '/ask_with_data' : '/ask';
+        const body = hasEmployee ? { question, employeeData } : { question };
+        const res = await fetch(CHAT_SERVER + endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        typing.remove();
+        const data = await res.json();
+        chatAppend(data.answer || data.error, false);
+    } catch(e) {
+        typing.remove();
+        chatAppend('❌ השרת לא מגיב. וודאי שפייתון פועל.', false);
+    }
+}
+</script>
+
+</body>
+</html>
