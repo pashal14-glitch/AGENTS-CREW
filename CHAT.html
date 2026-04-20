@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>עוזר תקשי"ר חכם</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .chat-container { width: 100%; max-width: 600px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 80vh; }
+        .chat-header { background: #1976D2; color: white; padding: 20px; border-radius: 12px 12px 0 0; text-align: center; font-size: 1.2em; font-weight: bold; }
+        .chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        
+        .message { max-width: 80%; padding: 12px 16px; border-radius: 15px; line-height: 1.5; }
+        .user-message { background: #DCF8C6; align-self: flex-end; border-bottom-left-radius: 0; }
+        .bot-message { background: #E4E6EB; align-self: flex-start; border-bottom-right-radius: 0; }
+        
+        .input-area { padding: 15px; background: #fff; border-top: 1px solid #ddd; border-radius: 0 0 12px 12px; display: flex; gap: 10px; }
+        input[type="text"] { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 20px; outline: none; font-size: 16px; }
+        button { background: #1976D2; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #1565C0; }
+        
+        .typing { color: #888; font-size: 0.9em; font-style: italic; display: none; margin-top: -10px; padding: 0 20px; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">📘 עוזר תקשי"ר חכם (אופליין)</div>
+    
+    <div class="chat-box" id="chatBox">
+        <div class="message bot-message">שלום! אני העוזר הווירטואלי שלך לענייני תקשי"ר. איך אפשר לעזור היום?</div>
+    </div>
+    
+    <div class="typing" id="typingIndicator">העוזר קורא את המסמך ומנסח תשובה...</div>
+    
+    <div class="input-area">
+        <input type="text" id="userInput" placeholder="הקלידי שאלה (למשל: כמה ימי הצהרה מותר לקחת?)..." onkeypress="handleKeyPress(event)">
+        <button onclick="sendMessage()">שלח</button>
+    </div>
+</div>
+
+<script>
+    async function sendMessage() {
+        const inputField = document.getElementById('userInput');
+        const message = inputField.value.trim();
+        if (!message) return;
+
+        // 1. הוספת השאלה של המשתמש למסך
+        appendMessage(message, 'user-message');
+        inputField.value = '';
+        
+        // 2. הצגת אנימציית "מקליד"
+        const typingIndicator = document.getElementById('typingIndicator');
+        typingIndicator.style.display = 'block';
+        scrollToBottom();
+
+        try {
+            // 3. שליחת השאלה לשרת הפייתון שלנו
+            const response = await fetch('http://127.0.0.1:5001/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: message })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                // 4. הוספת התשובה של הבוט למסך
+                appendMessage(data.answer, 'bot-message');
+            } else {
+                appendMessage("❌ שגיאה בתקשורת עם השרת.", 'bot-message');
+            }
+        } catch (error) {
+            appendMessage("❌ השרת המקומי לא מגיב. ודאי שפייתון פועל ברקע.", 'bot-message');
+        } finally {
+            typingIndicator.style.display = 'none';
+            scrollToBottom();
+        }
+    }
+
+    function appendMessage(text, className) {
+        const chatBox = document.getElementById('chatBox');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${className}`;
+        messageDiv.innerText = text;
+        chatBox.appendChild(messageDiv);
+    }
+
+    function scrollToBottom() {
+        const chatBox = document.getElementById('chatBox');
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    }
+</script>
+
+</body>
+</html>
