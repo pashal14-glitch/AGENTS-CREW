@@ -79,7 +79,7 @@ def identify_tax_symbols(question: str, llm) -> dict:
         "שאלת המשתמש: " + question + "\n\n"
         "החזר JSON בלבד:\n"
         "{\n"
-        "  \"symbols\": [\"91430\", \"91434\", \"91435\", \"91436\", \"91400\", \"91410\", \"91003\"],\n"
+        "  \"symbols\": [\"91430\", \"91434\", \"91435\", \"91436\",\"91437\", \"91400\",\"91410\", \"91411\", \"91412\", \"91003\"],\n"
         "  \"time_scope\": \"year_to_date\",\n"
         "  \"question_type\": \"points|tax_calc|general\"\n"
         "}"
@@ -211,6 +211,7 @@ def perform_tax_calculation(fetched_data: dict, tax_data: dict) -> dict:
         except (ValueError, TypeError):
             return default
 
+    # --- סמל 91430 --- נקודות זיכוי ואחוזי מס
     r91430 = get_latest_row(fetched_data.get("91430", []))
     print(f"[שלב 3] 91430 שורה: {r91430}")
     points_monthly = get_field(r91430, "schum")
@@ -218,6 +219,7 @@ def perform_tax_calculation(fetched_data: dict, tax_data: dict) -> dict:
     points_cumul = get_field(r91430, "field18")
     print(f"[שלב 3] נקודות חודשי={points_monthly} | שולי={marginal_rate} | מצטבר={points_cumul}")
 
+    # --- סמל 91434 --- פירוט נקודות חודשיות
     r91434 = get_latest_row(fetched_data.get("91434", []))
     print(f"[שלב 3] 91434 שורה: {r91434}")
     points_detail_monthly = {}
@@ -233,6 +235,7 @@ def perform_tax_calculation(fetched_data: dict, tax_data: dict) -> dict:
     points_toshav_cumul = get_field(r91434, "field19")
     print(f"[שלב 3] פירוט נקודות חודשי: {points_detail_monthly}")
 
+    # --- סמל 91435 --- נקודות מצטברות
     r91435 = get_latest_row(fetched_data.get("91435", []))
     print(f"[שלב 3] 91435 שורה: {r91435}")
     points_detail_cumul = {}
@@ -243,6 +246,7 @@ def perform_tax_calculation(fetched_data: dict, tax_data: dict) -> dict:
     if get_field(r91435, "achuz") > 0:
         points_detail_cumul["בן זוג מצטבר"] = get_field(r91435, "achuz")
 
+    # --- סמל 91436 --- נקודות ילדים
     r91436 = get_latest_row(fetched_data.get("91436", []))
     print(f"[שלב 3] 91436 שורה: {r91436}")
     field_map_children = {
@@ -256,45 +260,76 @@ def perform_tax_calculation(fetched_data: dict, tax_data: dict) -> dict:
         if val > 0:
             points_detail_cumul[name] = val
 
-    r91400 = get_latest_row(fetched_data.get("91400", []))
-    print(f"[שלב 3] 91400 שורה: {r91400}")
-    income_regular = get_field(r91400, "schum")
-    income_annual = get_field(r91400, "kamut")
-    print(f"[שלב 3] הכנסה רגילה={income_regular} | שנתית={income_annual}")
-
-    r91410 = get_latest_row(fetched_data.get("91410", []))
-    print(f"[שלב 3] 91410 שורה: {r91410}")
-    income_cumul = get_field(r91410, "schum") if r91410 else income_regular
-
-    r91003 = get_latest_row(fetched_data.get("91003", []))
-    print(f"[שלב 3] 91003 שורה: {r91003}")
-    actual_deduction = get_field(r91003, "schum")
-    print(f"[שלב 3] ניכוי בפועל: {actual_deduction}")
-
-    total_income = income_regular + income_annual
-    tax_by_brackets = calc_tax_by_brackets(total_income, tax_data)
-    credit_value = calc_credit_points_value(points_monthly, tax_data)
-    calculated_tax = max(0.0, round(tax_by_brackets - credit_value, 2))
-    print(f"[שלב 3] ✅ מס סופי: {tax_by_brackets} - {credit_value} = {calculated_tax}")
-
     if points_toshav_cumul > 0:
         points_detail_cumul["תושב מצטבר"] = points_toshav_cumul
 
+    # --- סמל 91410 --- הכנסות חייבות גולמיות מצטברות
+    r91410 = get_latest_row(fetched_data.get("91410", []))
+    print(f"[שלב 3] 91410 שורה: {r91410}")
+    income_gross_cumul = get_field(r91410, "field9")    # סך חייב גולמי מצטבר
+    income_regular_cumul = get_field(r91410, "schum")   # חייב רגיל מצטבר
+    print(f"[שלב 3] חייב גולמי={income_gross_cumul} | חייב רגיל={income_regular_cumul}")
+
+    # --- סמל 91411 --- פטורים, בסיס חייב, זיכויים
+    r91411 = get_latest_row(fetched_data.get("91411", []))
+    print(f"[שלב 3] 91411 שורה: {r91411}")
+    exemption_disabled   = get_field(r91411, "field10")  # פטור נכה
+    exemption_pensioner  = get_field(r91411, "field12")  # פטור גמלאי/שאיר
+    total_taxable        = get_field(r91411, "kamut")    # סה"כ חייב למס מצטבר
+    tax_before_credits   = get_field(r91411, "field11")  # מס לפני זיכויים
+    credit_disability    = get_field(r91411, "field12")  # זיכוי פ.ש
+    credit_family        = get_field(r91411, "field13")  # זיכוי מצב משפחתי
+    credit_savings       = get_field(r91411, "field14")  # זיכוי מחסכון
+    credit_location      = get_field(r91411, "field15")  # זיכוי מקום
+    print(f"[שלב 3] חייב למס={total_taxable} | מס לפני זיכויים={tax_before_credits}")
+    print(f"[שלב 3] זיכוי משפחה={credit_family} | זיכוי חסכון={credit_savings} | זיכוי מקום={credit_location}")
+
+    # --- סמל 91412 --- מס לגבייה מצטבר
+    r91412 = get_latest_row(fetched_data.get("91412", []))
+    print(f"[שלב 3] 91412 שורה: {r91412}")
+    tax_to_collect_cumul = get_field(r91412, "kamut")   # מס לגבייה מצטבר
+    print(f"[שלב 3] מס לגבייה מצטבר={tax_to_collect_cumul}")
+
+    # --- סמל 91003 --- מס שנוכה בפועל (סכום כל החודשים = מצטבר)
+    rows_91003 = fetched_data.get("91003", [])
+    print(f"[שלב 3] 91003 מספר שורות: {len(rows_91003)}")
+    tax_withheld_cumul = round(sum(
+        float(r.get("schum", 0) or 0) for r in rows_91003
+    ), 2)
+    tax_this_month = round(tax_to_collect_cumul - tax_withheld_cumul, 2)
+    print(f"[שלב 3] מס שנוכה מצטבר={tax_withheld_cumul} | מס חודש זה={tax_this_month}")
+
+    # --- סמל 91400 --- קלט חודשי (לתאימות לאחור)
+    r91400 = get_latest_row(fetched_data.get("91400", []))
+    income_regular = get_field(r91400, "schum")
+    income_annual  = get_field(r91400, "kamut")
+
     return {
-        "הכנסה_חייבת_רגילה": income_regular,
-        "הכנסה_חייבת_שנתית": income_annual,
-        "הכנסה_חייבת_סה_כ": total_income,
-        "הכנסה_מצטברת": income_cumul,
-        "מס_לפי_מדרגות": tax_by_brackets,
-        "נקודות_זיכוי_חודש": points_monthly,
-        "נקודות_זיכוי_מצטבר": points_cumul,
-        "פירוט_נקודות_חודשי": points_detail_monthly,
-        "פירוט_נקודות_מצטבר": points_detail_cumul,
-        "שווי_נקודות_זיכוי": credit_value,
-        "מס_מחושב": calculated_tax,
-        "ניכוי_בפועל": actual_deduction,
-        "אחוז_שולי": marginal_rate,
-        "תואם": abs(calculated_tax - actual_deduction) < 10.0,
+        # נקודות זיכוי
+        "נקודות_זיכוי_חודש":       points_monthly,
+        "נקודות_זיכוי_מצטבר":      points_cumul,
+        "פירוט_נקודות_חודשי":       points_detail_monthly,
+        "פירוט_נקודות_מצטבר":       points_detail_cumul,
+        "אחוז_שולי":                marginal_rate,
+        # הכנסות מצטברות (91410)
+        "חייב_גולמי_מצטבר":         income_gross_cumul,
+        "חייב_רגיל_מצטבר":          income_regular_cumul,
+        # פטורים וחייב למס (91411)
+        "פטור_נכה":                  exemption_disabled,
+        "פטור_גמלאי":                exemption_pensioner,
+        "סהכ_חייב_למס":              total_taxable,
+        "מס_לפני_זיכויים":           tax_before_credits,
+        "זיכוי_פש":                  credit_disability,
+        "זיכוי_משפחה":               credit_family,
+        "זיכוי_חסכון":               credit_savings,
+        "זיכוי_מקום":                credit_location,
+        # מס סופי (91412 ו-91003)
+        "מס_לגבייה_מצטבר":          tax_to_collect_cumul,
+        "מס_שנוכה_מצטבר":           tax_withheld_cumul,
+        "מס_בגין_חודש":              tax_this_month,
+        # לתאימות לאחור
+        "הכנסה_חייבת_רגילה":        income_regular,
+        "הכנסה_חייבת_שנתית":        income_annual,
     }
 
 # -------------------------------------------------------
