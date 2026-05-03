@@ -409,7 +409,7 @@ def explain_tax(employee_data: dict, question: str) -> str:
     # שלב 3
     try:
         calc_result = perform_tax_calculation(fetched_data, tax_data)
-        print(f"[TAX AGENT] ✅ חישוב הושלם: מס={calc_result['מס_מחושב']} | בפועל={calc_result['ניכוי_בפועל']}")
+       print(f"[TAX AGENT] ✅ חישוב הושלם: מס לגבייה={calc_result['מס_לגבייה_מצטבר']} | מס חודש={calc_result['מס_בגין_חודש']}")
     except Exception as e:
         print(f"[שלב 3] ❌ נפל: {e}")
         traceback.print_exc()
