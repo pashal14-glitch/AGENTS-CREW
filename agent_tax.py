@@ -1,29 +1,30 @@
 """
 agent_tax.py
 ------------
-סוכן מומחה מס הכנסה - ארכיטקטורה מבוססת מילון מתורגם ו-RAG (ללא לוגיקה קשיחה).
+סוכן מומחה מס הכנסה - ארכיטקטורת Time-Series (היסטוריה שנתית) וזיהוי מצטברים.
 """
 
 import os
 import json
 import traceback
 from pathlib import Path
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
 
 KNOWLEDGE_DIR = Path(os.getenv("KNOWLEDGE_DIR", "./knowledge"))
 
-# שמות קבצי הידע (Knowledge Base) שמנהלים את הכל
+# שמות קבצי הידע (Knowledge Base)
 TAX_PROMPT_FILE = "tax_prompt.md"
 TAX_MAPPING_FILE_1 = "tax_input_output_symbols.json"
 TAX_MAPPING_FILE_2 = "tax_output_symbols.json"
-TAX_DATA_FILE_2 = "tax_data_2026.json" # אפשר לשנות לשנת 2025 במידת הצורך
-TAX_DATA_FILE_1 = "tax_data_2025.json" # אפשר לשנות לשנת 2025 במידת הצורך
+TAX_DATA_FILE_2026 = "tax_data_2026.json" # אפשר לשנות לפי שנת המס
+TAX_DATA_FILE_2025 = "tax_data_2025.json"
 CHILDREN_POINTS_FILE = "children_points.json"
 
 # -------------------------------------------------------
-# פונקציות עזר לטעינת ידע
+# פונקציות עזר 
 # -------------------------------------------------------
 def load_text_file(filename: str, default: str = "") -> str:
     path = KNOWLEDGE_DIR / filename
@@ -32,56 +33,126 @@ def load_text_file(filename: str, default: str = "") -> str:
     print(f"[LOAD] ⚠️ קובץ {filename} לא נמצא. משתמש בברירת מחדל.")
     return default
 
-def load_json_file(filename: str) -> dict:
+def load_json_file(filename: str):
     path = KNOWLEDGE_DIR / filename
     if path.exists():
         return json.loads(path.read_text(encoding="utf-8"))
-    print(f"[LOAD] ⚠️ קובץ {filename} לא נמצא. מחזיר מילון ריק.")
-    return {}
+    print(f"[LOAD] ⚠️ קובץ {filename} לא נמצא.")
+    return None
+
+def excel_to_date(serial) -> datetime:
+    """המרת תאריך מספרי (כפי שנהוג במערכות שכר) לתאריך אמיתי"""
+    try:
+        return datetime(1899, 12, 30) + timedelta(days=int(float(serial)))
+    except Exception:
+        return datetime(2000, 1, 1)
+
+def get_field_key(idx: int) -> str:
+    """המרת אינדקס לשם השדה הלוגי במערכת השכר (schum, kamut, וכו')"""
+    idx = int(idx)
+    if idx == 1: return "schum"
+    if idx == 2: return "kamut"
+    if idx == 3: return "achuz"
+    if idx == 4: return "taarif"
+    return f"field{idx + 4}" # לדוגמה אינדקס 5 הופך ל-field9
 
 # -------------------------------------------------------
-# מנוע התרגום (הלוגיקה היחידה של פייתון)
+# הרכבת המילון והזרקת תגיות "מצטבר"
+# -------------------------------------------------------
+def build_unified_mapping() -> dict:
+    """קורא את שני קבצי המילון ומשלב אותם, תוך סימון סמלי פלט כמצטברים"""
+    mapping = {}
+    
+    # 1. טעינת קובץ קלט/פלט כללי
+    data1 = load_json_file(TAX_MAPPING_FILE_1) or {}
+    items1 = data1.get("סמלי_קלט", []) + data1.get("סמלי_פלט", [])
+    for item in items1:
+        semel = str(item.get("סמל", ""))
+        if not semel or semel == "None": continue
+        if semel not in mapping: mapping[semel] = {}
+        idx = item.get("שדה_בסמל")
+        name = item.get("אופי_הנתון", "")
+        if idx and name:
+            mapping[semel][get_field_key(idx)] = {"name": name}
+            
+    # 2. טעינת קובץ הפלט (tax_output_symbols.json) - חובה לסמן כמצטבר!
+    data2 = load_json_file(TAX_MAPPING_FILE_2) or []
+    if isinstance(data2, list):
+        for item in data2:
+            semel = str(item.get("סמל", ""))
+            if not semel or semel == "None": continue
+            if semel not in mapping: mapping[semel] = {}
+            idx = item.get("שדה_בסמל")
+            name = item.get("אופי_הנתון", "")
+            if idx and name and name != "ריק":
+                # הזרקה אוטומטית של המילה "מצטבר" כדי שהמודל יבין
+                if "(מצטבר)" not in name:
+                    name = f"{name} (מצטבר)"
+                mapping[semel][get_field_key(idx)] = {"name": name}
+                
+    return mapping
+
+# -------------------------------------------------------
+# מנוע בניית ציר הזמן (Time-Series) למודל השפה
 # -------------------------------------------------------
 def translate_data_for_llm(raw_employee_data: dict, mapping_dict: dict) -> dict:
-    """
-    לוקח את התלוש הגולמי, מסנן וממפה אותו לשמות שדות בעברית לפי ה-JSON המילוני.
-    בלי שום Hardcoding לסמלים ספציפיים.
-    """
-    print("[TRANSLATOR] מתחיל תרגום נתונים לעברית...")
-    translated_data = {}
+    """מתרגם נתונים ואוסף היסטוריה מתחילת השנה הנוכחית בלבד"""
+    print("[TRANSLATOR] מתחיל איסוף היסטורי מתחילת שנת המס...")
     elements = raw_employee_data.get("elements", {})
     
-    for semel_id, rows in elements.items():
-        # אם הסמל נמצא במילון שלנו
-        if semel_id in mapping_dict:
-            semel_info = mapping_dict[semel_id]
-            heb_name = semel_info.get("name", f"סמל {semel_id}")
-            fields_mapping = semel_info.get("fields", {})
-            
-            if not rows:
-                continue
-            
-            # לוקחים את השורה האחרונה (החודש הנוכחי)
-            latest_row = max(rows, key=lambda r: float(r.get("taarichSachar", 0) or 0))
-            
-            semel_translated_fields = {}
-            for field_code, value in latest_row.items():
-                # מתרגמים רק שדות שקיימים במילון ויש להם ערך ממשי
-                if field_code in fields_mapping:
-                    heb_field_name = fields_mapping[field_code]
-                    try:
-                        float_val = float(value)
-                        if float_val != 0:  # סינון ערכי אפס
-                            semel_translated_fields[heb_field_name] = float_val
-                    except (ValueError, TypeError):
-                        if value: # טקסט שאינו ריק
-                            semel_translated_fields[heb_field_name] = value
-            
-            # מוסיפים רק אם נמצאו נתונים
-            if semel_translated_fields:
-                translated_data[heb_name] = semel_translated_fields
+    # מציאת שנת המס הנוכחית (לפי התאריך המקסימלי שנמצא בתלוש)
+    max_serial = 0
+    for rows in elements.values():
+        for r in rows:
+            val = r.get("taarichSachar", 0)
+            if val:
+                try: max_serial = max(max_serial, float(val))
+                except: pass
                 
-    print(f"[TRANSLATOR] התרגום הסתיים. סמלים מתורגמים: {list(translated_data.keys())}")
+    current_year = excel_to_date(max_serial).year if max_serial > 0 else datetime.now().year
+    print(f"[TRANSLATOR] שנת המס שזוהתה לחישוב: {current_year}")
+
+    translated_data = {}
+    
+    for semel, rows in elements.items():
+        if semel not in mapping_dict:
+            continue
+            
+        semel_mapping = mapping_dict[semel]
+        
+        # מיון השורות לפי תאריך כדי שהחודשים יופיעו כרונולוגית (חודש 1, חודש 2...)
+        sorted_rows = sorted(rows, key=lambda r: float(r.get("taarichSachar", 0) or 0))
+        
+        for row in sorted_rows:
+            serial = row.get("taarichSachar", 0)
+            if not serial: continue
+            
+            try:
+                dt = excel_to_date(serial)
+                # דרישת הברזל: מביאים נתונים אך ורק מתחילת שנת המס!
+                if dt.year != current_year:
+                    continue 
+                month_str = f"חודש {dt.month}"
+            except Exception:
+                continue
+                
+            for field_key, field_info in semel_mapping.items():
+                val = row.get(field_key)
+                if val is not None and str(val).strip() != "":
+                    try:
+                        f_val = float(val)
+                        if f_val == 0: continue # מתעלמים מאפסים כדי למנוע רעש למודל
+                    except ValueError:
+                        f_val = val
+                        
+                    heb_name = field_info["name"]
+                    if heb_name not in translated_data:
+                        translated_data[heb_name] = {}
+                        
+                    # שמירת הנתון בציר הזמן של השדה הזה
+                    translated_data[heb_name][month_str] = f_val
+                    
+    print(f"[TRANSLATOR] נאספו נתונים היסטוריים עבור {len(translated_data)} שדות.")
     return translated_data
 
 # -------------------------------------------------------
@@ -89,37 +160,35 @@ def translate_data_for_llm(raw_employee_data: dict, mapping_dict: dict) -> dict:
 # -------------------------------------------------------
 def explain_tax(employee_data: dict, question: str) -> str:
     print(f"\n{'='*50}")
-    print(f"[TAX AGENT] התחלה - ארכיטקטורה חכמה")
-    print(f"[TAX AGENT] שאלת משתמש: {question}")
+    print(f"[TAX AGENT] התחלה - מנתח שאלת משתמש: {question}")
     print(f"{'='*50}")
 
     try:
         from langchain_anthropic import ChatAnthropic
         llm = ChatAnthropic(
-            model="claude-sonnet-4-5",
-            temperature=0,
+            model="claude-3-5-sonnet-20241022",
+            temperature=0, # חובה לשמור על 0 למניעת הזיות
             max_tokens=2048,
             api_key=os.getenv("ANTHROPIC_API_KEY")
         )
-        print(f"[TAX AGENT] ✅ LLM אותחל")
     except Exception as e:
         print(f"[TAX AGENT] ❌ שגיאה באתחול LLM: {e}")
         traceback.print_exc()
         raise
 
-    # 1. טעינת בסיס הידע (Knowledge Base)
+    # 1. טעינת בסיס הידע
     tax_prompt = load_text_file(TAX_PROMPT_FILE, default="ענה כסוכן מס מקצועי.")
-    mapping_dict = load_json_file(TAX_MAPPING_FILE)
-    tax_data = load_text_file(TAX_DATA_FILE) # טוענים כטקסט פשוט כדי להזריק לפרומפט
-    children_points = load_text_file(CHILDREN_POINTS_FILE) # טוענים כטקסט פשוט
+    mapping_dict = build_unified_mapping()
+    tax_data = load_text_file(TAX_DATA_FILE_2026) 
+    children_points = load_text_file(CHILDREN_POINTS_FILE)
 
     if not mapping_dict:
-        return f"❌ שגיאה: קובץ המילון {TAX_MAPPING_FILE} לא נמצא. המערכת לא יכולה לתרגם את נתוני התלוש."
+        return "❌ שגיאה: קבצי המילון לא נטענו. בדוק את תיקיית knowledge."
 
-    # 2. תרגום הנתונים למילים (The Magic)
+    # 2. בניית ציר הזמן לעברית
     translated_payslip = translate_data_for_llm(employee_data, mapping_dict)
 
-    # 3. הרכבת הפרומפט הסופי למודל (RAG Pipeline)
+    # 3. הרכבת הפרומפט הסופי (RAG Pipeline)
     prompt = f"""
 {tax_prompt}
 
@@ -130,7 +199,7 @@ def explain_tax(employee_data: dict, question: str) -> str:
 2. חוקת זכאות לנקודות ילדים:
 {children_points}
 
---- נתוני התלוש המתורגמים של העובד החודש ---
+--- היסטוריית נתוני התלוש (מתחילת שנת המס) ---
 {json.dumps(translated_payslip, ensure_ascii=False, indent=2)}
 
 ====================================================
@@ -138,15 +207,14 @@ def explain_tax(employee_data: dict, question: str) -> str:
 ====================================================
 """
 
-    print(f"[LLM] שולח פרומפט מאוחד למודל... (טקסט באורך {len(prompt)} תווים)")
+    print(f"[LLM] שולח נתונים (ציר זמן) למודל לקבלת הסבר...")
     
-    # 4. ביצוע החשיבה (Reasoning)
     try:
         result = llm.invoke(prompt)
         content = result.content if hasattr(result, "content") else str(result)
-        print(f"[LLM] ✅ ההסבר הושלם. מחזיר למשתמש.")
+        print(f"[LLM] ✅ ההסבר הושלם.")
         return content
     except Exception as e:
-        print(f"[LLM] ❌ שגיאה בקריאה למודל השפה: {e}")
+        print(f"[LLM] ❌ שגיאה בקריאה למודל: {e}")
         traceback.print_exc()
         raise
